@@ -23,9 +23,21 @@ jobs:
   remove-triage-label-from-issues:
     runs-on: ubuntu-latest
     steps:
+      - name: Check if label should trigger removal
+        id: check-label
+        run: |
+          EXCLUDED="${{ inputs.excluded_labels || 'triage,more-info-needed' }}"
+          CURRENT_LABEL="${{ github.event.label.name }}"
+          
+          if echo "$EXCLUDED" | grep -qw "$CURRENT_LABEL"; then
+            echo "should_remove=false" >> $GITHUB_OUTPUT
+          else
+            echo "should_remove=true" >> $GITHUB_OUTPUT
+          fi
+        shell: bash
+      
       - name: Remove triage label
-        if: |
-          !contains(fromJSON(format('[{0}]', join(split(inputs.excluded_labels || 'triage,more-info-needed', ','), '","'))), github.event.label.name)
+        if: steps.check-label.outputs.should_remove == 'true'
         run: gh issue edit "$NUMBER" --remove-label "$LABELS"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

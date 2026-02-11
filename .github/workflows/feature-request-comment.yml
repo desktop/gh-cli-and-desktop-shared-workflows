@@ -6,7 +6,6 @@ on:
         description: 'URL to the help wanted label for the repository'
         type: string
         required: false
-        default: 'https://github.com/${{ github.repository }}/labels/help%20wanted'
   issues:
     types:
       - labeled

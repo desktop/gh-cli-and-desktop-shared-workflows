@@ -26,32 +26,48 @@ permissions:
 
 jobs:
   add-comment-to-unable-to-reproduce-issues:
-    if: github.event.label.name == (inputs.unable_to_reproduce_label || 'unable-to-reproduce')
     runs-on: ubuntu-latest
-    env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      GH_REPO: ${{ github.repository }}
-      NUMBER: ${{ github.event.issue.number }}
-      LABELS: ${{ inputs.more_info_label || 'more-info-needed' }}
-      BODY: >
-        Thank you for your issue! Unfortunately, we are unable to reproduce the
-        issue you are experiencing. Please provide more information so we can
-        help you.
+    steps:
+      - name: Check if unable-to-reproduce label was added
+        id: check
+        run: |
+          UNABLE_LABEL="${{ inputs.unable_to_reproduce_label || 'unable-to-reproduce' }}"
+          ADDED_LABEL="${{ github.event.label.name }}"
+          if [ "$ADDED_LABEL" = "$UNABLE_LABEL" ]; then
+            echo "should_comment=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_comment=false" >> $GITHUB_OUTPUT
+          fi
+        shell: bash
+      
+      - name: Add more-info-needed label
+        if: steps.check.outputs.should_comment == 'true'
+        run: gh issue edit "$NUMBER" --add-label "$LABELS"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.issue.number }}
+          LABELS: ${{ inputs.more_info_label || 'more-info-needed' }}
+      
+      - name: Add comment
+        if: steps.check.outputs.should_comment == 'true'
+        run: |
+          LOG_PATH="${{ inputs.log_menu_path || '`Help` > `Show Logs in Finder/Explorer`' }}"
+          BODY="Thank you for your issue! Unfortunately, we are unable to reproduce the issue you are experiencing. Please provide more information so we can help you.
 
-
-        Here are some tips for writing reproduction steps: 
-          - Step by step instructions accompanied by screenshots or screencasts
-        are the best.
-          - Be as specific as possible; include as much detail as you can. 
+          Here are some tips for writing reproduction steps:
+          - Step by step instructions accompanied by screenshots or screencasts are the best.
+          - Be as specific as possible; include as much detail as you can.
           - If not already provided, include:
-              - the version of the application you are using. 
+              - the version of the application you are using.
               - the operating system you are using
               - any environment factors you can think of.
               - any custom configuration you are using.
-              - a log file from the day you experienced the issue (access log
-        files via the file menu and select ${{ inputs.log_menu_path || '`Help` > `Show Logs in Finder/Explorer`' }}).
-          - If relevant and can be shared, provide the repository or code you
-        are using.
-    steps:
-      - run: gh issue edit "$NUMBER" --add-label "$LABELS"
-      - run: gh issue comment "$NUMBER" --body "$BODY"
+              - a log file from the day you experienced the issue (access log files via the file menu and select $LOG_PATH).
+          - If relevant and can be shared, provide the repository or code you are using."
+          
+          gh issue comment "$NUMBER" --body "$BODY"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.issue.number }}
