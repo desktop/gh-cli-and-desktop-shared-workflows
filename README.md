@@ -329,6 +329,42 @@ jobs:
       pull-requests: write
 ```
 
+### 14. Create Discussion for Issue/PR (`triage-discuss.yml`)
+Creates a linked discussion issue in an internal repository when the `discuss` label is added to an issue or PR. This provides a place for private team commentary tied to the public issue.
+
+**Triggers:**
+- `issues: [labeled]` (triggers on `discuss` label)
+- `pull_request_target: [labeled]` (triggers on `discuss` label)
+- `workflow_call`
+
+**Inputs:**
+- `target_repo` (required): Internal repository where discussion issues are created (e.g., `github/cli`)
+- `discuss_label` (optional, default: 'discuss'): Label that triggers this workflow
+- `target_label` (optional, default: 'triage'): Label to apply to the created discussion issue
+- `cc_team` (optional): Team to cc on the discussion issue (e.g., `@github/cli`)
+
+**Secrets:**
+- `discussion_token` (required): Token with permissions to create issues in the target repo
+
+**Usage:**
+```yaml
+name: 'Triage: Create discussion for issue/PR'
+on:
+  issues:
+    types: [labeled]
+  pull_request_target:
+    types: [labeled]
+
+jobs:
+  discuss:
+    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-discuss.yml@main
+    with:
+      target_repo: 'github/cli'
+      cc_team: '@github/cli'
+    secrets:
+      discussion_token: ${{ secrets.CLI_DISCUSSION_TRIAGE_TOKEN }}
+```
+
 ## Using These Workflows
 
 To use these workflows in your repository, create thin workflow files in your `.github/workflows` directory that reference these shared workflows using the `uses` keyword with `workflow_call`.
@@ -417,6 +453,15 @@ jobs:
     uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-ready-for-review.yml@main
     permissions:
       pull-requests: write
+
+  discuss:
+    if: (github.event_name == 'issues' || github.event_name == 'pull_request_target') && github.event.action == 'labeled'
+    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-discuss.yml@main
+    with:
+      target_repo: 'your-org/your-internal-repo'
+      cc_team: '@your-org/your-team'
+    secrets:
+      discussion_token: ${{ secrets.DISCUSSION_TRIAGE_TOKEN }}
 
   no-response:
     if: github.event_name == 'issue_comment'

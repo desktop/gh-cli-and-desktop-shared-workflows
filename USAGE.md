@@ -93,6 +93,15 @@ jobs:
     permissions:
       pull-requests: write
 
+  discuss:
+    if: (github.event_name == 'issues' || github.event_name == 'pull_request_target') && github.event.action == 'labeled'
+    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-discuss.yml@main
+    with:
+      target_repo: 'github/desktop'
+      cc_team: '@github/desktop'
+    secrets:
+      discussion_token: ${{ secrets.DESKTOP_DISCUSSION_TRIAGE_TOKEN }}
+
   no-response:
     if: github.event_name == 'issue_comment'
     uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-no-response-close.yml@main
@@ -215,6 +224,15 @@ jobs:
     uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-ready-for-review.yml@main
     permissions:
       pull-requests: write
+
+  discuss:
+    if: (github.event_name == 'issues' || github.event_name == 'pull_request_target') && github.event.action == 'labeled'
+    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-discuss.yml@main
+    with:
+      target_repo: 'github/cli'
+      cc_team: '@github/cli'
+    secrets:
+      discussion_token: ${{ secrets.CLI_DISCUSSION_TRIAGE_TOKEN }}
 
   no-response:
     if: github.event_name == 'issue_comment'
