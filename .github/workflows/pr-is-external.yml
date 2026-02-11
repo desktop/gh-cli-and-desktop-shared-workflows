@@ -1,0 +1,36 @@
+name: PR external
+on:
+  workflow_call:
+    inputs:
+      repository_org:
+        description: 'Organization name to check if PR is internal'
+        type: string
+        required: false
+      labels_to_add:
+        description: 'Comma-separated list of labels to add to external PRs'
+        type: string
+        required: false
+        default: 'external,triage'
+  pull_request_target:
+    types:
+      - reopened
+      - opened
+
+jobs:
+  label_issues:
+    # pull_request.head.label = {owner}:{branch}
+    # Check if PR is external by verifying if it starts with the repository org
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      repository-projects: read
+    steps:
+      - name: Label external PR
+        if: |
+          startsWith(github.event.pull_request.head.label, format('{0}:', inputs.repository_org || github.repository_owner)) == false
+        run: gh pr edit "$NUMBER" --add-label "$LABELS"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.pull_request.number }}
+          LABELS: ${{ inputs.labels_to_add || 'external,triage' }}
