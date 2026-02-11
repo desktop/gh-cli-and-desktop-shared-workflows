@@ -1,4 +1,4 @@
-name: Label incoming issues
+name: 'Triage: Label incoming issues'
 on:
   workflow_call:
     inputs:
@@ -6,7 +6,7 @@ on:
         description: 'Label to add to new and reopened issues'
         type: string
         required: false
-        default: 'triage'
+        default: 'needs-triage'
       more_info_label:
         description: 'Label that indicates more info is needed'
         type: string
@@ -31,7 +31,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
           NUMBER: ${{ github.event.issue.number }}
-          LABELS: ${{ inputs.triage_label || 'triage' }}
+          LABELS: ${{ inputs.triage_label || 'needs-triage' }}
   label_more_info_issues:
     runs-on: ubuntu-latest
     if: github.event.action == 'unlabeled'
@@ -55,4 +55,4 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
           NUMBER: ${{ github.event.issue.number }}
-          LABELS: ${{ inputs.triage_label || 'triage' }}
+          LABELS: ${{ inputs.triage_label || 'needs-triage' }}

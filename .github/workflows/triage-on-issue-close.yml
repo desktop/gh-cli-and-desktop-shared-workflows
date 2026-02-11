@@ -1,4 +1,4 @@
-name: Remove triage label from closed issues
+name: 'Triage: Remove labels on issue close'
 on:
   workflow_call:
     inputs:
@@ -6,7 +6,7 @@ on:
         description: 'Comma-separated list of labels to remove on issue close'
         type: string
         required: false
-        default: 'triage'
+        default: 'needs-triage'
   issues:
     types:
       - closed
@@ -21,4 +21,4 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
           NUMBER: ${{ github.event.issue.number }}
-          LABELS: ${{ inputs.labels_to_remove || 'triage' }}
+          LABELS: ${{ inputs.labels_to_remove || 'needs-triage' }}

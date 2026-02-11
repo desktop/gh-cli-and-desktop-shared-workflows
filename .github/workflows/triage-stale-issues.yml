@@ -1,4 +1,4 @@
-name: 'Marks stale issues and PRs'
+name: 'Triage: Mark stale issues and PRs'
 on:
   workflow_call:
     inputs:
@@ -6,7 +6,7 @@ on:
         description: 'Label to add to stale issues'
         type: string
         required: false
-        default: 'stale, triage'
+        default: 'stale,needs-triage'
       start_date:
         description: 'Skip stale action for issues/PRs created before this date (ISO 8601)'
         type: string
@@ -44,7 +44,7 @@ jobs:
     steps:
       - uses: actions/stale@v9
         with:
-          stale-issue-label: ${{ inputs.stale_issue_label || 'stale, triage' }}
+          stale-issue-label: ${{ inputs.stale_issue_label || 'stale,needs-triage' }}
           start-date: ${{ inputs.start_date || '2024-11-25T00:00:00Z' }}
           days-before-stale: ${{ inputs.days_before_stale || 365 }}
           days-before-close: ${{ inputs.days_before_close || -1 }}

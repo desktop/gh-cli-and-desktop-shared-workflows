@@ -1,0 +1,35 @@
+name: 'Triage: Close PRs without help-wanted issue'
+
+on:
+  workflow_call:
+    inputs:
+      no_help_wanted_label:
+        description: 'Label that triggers this workflow'
+        type: string
+        required: false
+        default: 'no-help-wanted-issue'
+  pull_request_target:
+    types: [labeled]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  close-no-help-wanted:
+    if: github.event.label.name == 'no-help-wanted-issue'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      NUMBER: ${{ github.event.pull_request.number }}
+    steps:
+      - name: Add comment
+        run: |
+          gh pr comment "$NUMBER" --body "Thank you for your contribution! Unfortunately, this pull request is not linked to a \`help wanted\` issue, so we are unable to accept it at this time.
+
+          We encourage community contributions on issues labeled [\`help wanted\`](https://github.com/${{ github.repository }}/labels/help%20wanted). If you'd like to contribute, please find an open \`help wanted\` issue and link your PR to it.
+
+          If you believe this was done in error, please let us know."
+
+      - name: Close PR
+        run: gh pr close "$NUMBER"

@@ -1,4 +1,4 @@
-name: Add unable-to-reproduce comment
+name: 'Triage: Comment on unable-to-reproduce'
 on:
   workflow_call:
     inputs:

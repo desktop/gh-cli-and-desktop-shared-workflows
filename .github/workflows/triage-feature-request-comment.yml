@@ -1,4 +1,4 @@
-name: Add feature-request comment
+name: 'Triage: Comment on feature requests'
 on:
   workflow_call:
     inputs:
@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   add-comment-to-feature-request-issues:
-    if: github.event.label.name == 'feature-request'
+    if: github.event.label.name == 'enhancement'
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

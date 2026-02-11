@@ -1,4 +1,4 @@
-name: Remove triage label
+name: 'Triage: Remove triage label on reply'
 on:
   workflow_call:
     inputs:
@@ -6,12 +6,12 @@ on:
         description: 'Label to remove when other labels are added'
         type: string
         required: false
-        default: 'triage'
+        default: 'needs-triage'
       excluded_labels:
         description: 'Comma-separated list of labels that should not trigger removal (e.g., triage,more-info-needed)'
         type: string
         required: false
-        default: 'triage,more-info-needed'
+        default: 'needs-triage,more-info-needed'
   issues:
     types:
       - labeled
@@ -26,7 +26,7 @@ jobs:
       - name: Check if label should trigger removal
         id: check-label
         run: |
-          EXCLUDED="${{ inputs.excluded_labels || 'triage,more-info-needed' }}"
+          EXCLUDED="${{ inputs.excluded_labels || 'needs-triage,more-info-needed' }}"
           CURRENT_LABEL="${{ github.event.label.name }}"
           
           if echo "$EXCLUDED" | grep -qw "$CURRENT_LABEL"; then
@@ -43,4 +43,4 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
           NUMBER: ${{ github.event.issue.number }}
-          LABELS: ${{ inputs.label_to_remove || 'triage' }}
+          LABELS: ${{ inputs.label_to_remove || 'needs-triage' }}

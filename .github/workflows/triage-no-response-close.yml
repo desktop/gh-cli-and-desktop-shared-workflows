@@ -1,4 +1,4 @@
-name: No Response
+name: 'Triage: Close issues with no response'
 
 # Both `issue_comment` and `scheduled` event types are required for this Action
 # to work properly.
@@ -9,7 +9,7 @@ on:
         description: 'Number of days until issue is closed'
         type: number
         required: false
-        default: 7
+        default: 14
       response_required_label:
         description: 'Label that indicates a response is required'
         type: string
@@ -40,5 +40,5 @@ jobs:
             hesitate to reach out if you have or find the answers we need. If
             you answer our questions above, this issue will automatically
             reopen.
-          daysUntilClose: ${{ inputs.days_until_close || 7 }}
+          daysUntilClose: ${{ inputs.days_until_close || 14 }}
           responseRequiredLabel: ${{ inputs.response_required_label || 'more-info-needed' }}

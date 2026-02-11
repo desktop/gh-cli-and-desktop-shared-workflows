@@ -1,4 +1,4 @@
-name: Close issue/PR on adding invalid label
+name: 'Triage: Close invalid issues/PRs'
 
 # **What it does**: This action closes issues and PRs that are labeled as invalid.
 
@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   close-on-adding-invalid-label:
-    if: github.event.label.name == 'invalid'
+    if: github.event.label.name == 'invalid' || github.event.label.name == 'suspected-spam'
     runs-on: ubuntu-latest
 
     steps:

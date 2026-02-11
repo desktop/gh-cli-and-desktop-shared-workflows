@@ -19,7 +19,7 @@ on:
 jobs:
   close-invalid:
     if: github.event_name == 'issues' || github.event_name == 'pull_request_target'
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/close-invalid.yml@main
+    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-close-invalid.yml@main
     permissions:
       contents: read
       issues: write
@@ -27,13 +27,13 @@ jobs:
 
   close-single-word:
     if: github.event_name == 'issues' && github.event.action == 'opened'
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/close-single-word-issues.yml@main
+    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-close-single-word-issues.yml@main
     permissions:
       issues: write
 
   feature-request-comment:
     if: github.event_name == 'issues' && github.event.action == 'labeled'
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/feature-request-comment.yml@main
+    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-feature-request-comment.yml@main
     with:
       help_wanted_url: 'https://github.com/desktop/desktop/labels/help%20wanted'
     permissions:
@@ -41,45 +41,63 @@ jobs:
 
   label-external-pr:
     if: github.event_name == 'pull_request_target'
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/pr-is-external.yml@main
+    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-label-external-pr.yml@main
     with:
       repository_org: 'desktop'
-      labels_to_add: 'external,triage'
+      labels_to_add: 'external,needs-triage'
     permissions:
       pull-requests: write
       repository-projects: read
 
   triage-issues:
     if: github.event_name == 'issues'
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-issues.yml@main
+    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-label-incoming.yml@main
     permissions:
       issues: write
 
   remove-triage-label:
     if: github.event_name == 'issues' && github.event.action == 'labeled'
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/remove-triage-label.yml@main
+    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-remove-label-on-reply.yml@main
     permissions:
       issues: write
 
   on-issue-close:
     if: github.event_name == 'issues' && github.event.action == 'closed'
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/on-issue-close.yml@main
+    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-on-issue-close.yml@main
     permissions:
       issues: write
 
   unable-to-reproduce:
     if: github.event_name == 'issues' && github.event.action == 'labeled'
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/unable-to-reproduce-comment.yml@main
+    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-unable-to-reproduce-comment.yml@main
     with:
       log_menu_path: '`Help` > `Show Logs in Finder/Explorer`'
     permissions:
       issues: write
 
+  close-off-topic:
+    if: github.event_name == 'issues' && github.event.action == 'labeled'
+    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-close-off-topic.yml@main
+    permissions:
+      issues: write
+
+  close-no-help-wanted:
+    if: github.event_name == 'pull_request_target' && github.event.action == 'labeled'
+    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-close-no-help-wanted.yml@main
+    permissions:
+      pull-requests: write
+
+  ready-for-review:
+    if: github.event_name == 'pull_request_target' && github.event.action == 'labeled'
+    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-ready-for-review.yml@main
+    permissions:
+      pull-requests: write
+
   no-response:
     if: github.event_name == 'issue_comment'
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/no-response.yml@main
+    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-no-response-close.yml@main
     with:
-      days_until_close: 7
+      days_until_close: 14
       response_required_label: 'more-info-needed'
     permissions:
       issues: write
@@ -95,14 +113,14 @@ on:
 
 jobs:
   stale:
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/stale-issues.yml@main
+    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-stale-issues.yml@main
     with:
-      stale_issue_label: 'stale, triage'
+      stale_issue_label: 'stale,needs-triage'
       start_date: '2024-11-25T00:00:00Z'
       days_before_stale: 365
       days_before_close: -1
       days_before_pr_stale: -1
-      exempt_issue_labels: 'never-stale, help wanted'
+      exempt_issue_labels: 'never-stale,help wanted'
     permissions:
       issues: write
 ```
@@ -124,7 +142,7 @@ on:
 jobs:
   close-invalid:
     if: github.event_name == 'issues' || github.event_name == 'pull_request_target'
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/close-invalid.yml@main
+    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-close-invalid.yml@main
     permissions:
       contents: read
       issues: write
@@ -132,13 +150,13 @@ jobs:
 
   close-single-word:
     if: github.event_name == 'issues' && github.event.action == 'opened'
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/close-single-word-issues.yml@main
+    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-close-single-word-issues.yml@main
     permissions:
       issues: write
 
   feature-request-comment:
     if: github.event_name == 'issues' && github.event.action == 'labeled'
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/feature-request-comment.yml@main
+    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-feature-request-comment.yml@main
     with:
       help_wanted_url: 'https://github.com/cli/cli/labels/help%20wanted'
     permissions:
@@ -146,45 +164,63 @@ jobs:
 
   label-external-pr:
     if: github.event_name == 'pull_request_target'
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/pr-is-external.yml@main
+    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-label-external-pr.yml@main
     with:
       repository_org: 'cli'
-      labels_to_add: 'external,triage'
+      labels_to_add: 'external,needs-triage'
     permissions:
       pull-requests: write
       repository-projects: read
 
   triage-issues:
     if: github.event_name == 'issues'
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-issues.yml@main
+    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-label-incoming.yml@main
     permissions:
       issues: write
 
   remove-triage-label:
     if: github.event_name == 'issues' && github.event.action == 'labeled'
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/remove-triage-label.yml@main
+    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-remove-label-on-reply.yml@main
     permissions:
       issues: write
 
   on-issue-close:
     if: github.event_name == 'issues' && github.event.action == 'closed'
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/on-issue-close.yml@main
+    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-on-issue-close.yml@main
     permissions:
       issues: write
 
   unable-to-reproduce:
     if: github.event_name == 'issues' && github.event.action == 'labeled'
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/unable-to-reproduce-comment.yml@main
+    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-unable-to-reproduce-comment.yml@main
     with:
       log_menu_path: '`gh --version` output and relevant logs'
     permissions:
       issues: write
 
+  close-off-topic:
+    if: github.event_name == 'issues' && github.event.action == 'labeled'
+    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-close-off-topic.yml@main
+    permissions:
+      issues: write
+
+  close-no-help-wanted:
+    if: github.event_name == 'pull_request_target' && github.event.action == 'labeled'
+    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-close-no-help-wanted.yml@main
+    permissions:
+      pull-requests: write
+
+  ready-for-review:
+    if: github.event_name == 'pull_request_target' && github.event.action == 'labeled'
+    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-ready-for-review.yml@main
+    permissions:
+      pull-requests: write
+
   no-response:
     if: github.event_name == 'issue_comment'
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/no-response.yml@main
+    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-no-response-close.yml@main
     with:
-      days_until_close: 7
+      days_until_close: 14
       response_required_label: 'more-info-needed'
     permissions:
       issues: write
@@ -200,14 +236,14 @@ on:
 
 jobs:
   stale:
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/stale-issues.yml@main
+    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-stale-issues.yml@main
     with:
-      stale_issue_label: 'stale, triage'
+      stale_issue_label: 'stale,needs-triage'
       start_date: '2024-11-25T00:00:00Z'
       days_before_stale: 365
       days_before_close: -1
       days_before_pr_stale: -1
-      exempt_issue_labels: 'never-stale, help wanted'
+      exempt_issue_labels: 'never-stale,help wanted'
     permissions:
       issues: write
 ```
@@ -230,7 +266,7 @@ The main differences in usage between `cli/cli` and `desktop/desktop`:
 The examples above use `@main` to always use the latest version. For production use, consider pinning to a specific version or SHA:
 
 ```yaml
-uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/close-invalid.yml@v1.0.0
+uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-close-invalid.yml@v1.0.0
 ```
 
 ## Testing

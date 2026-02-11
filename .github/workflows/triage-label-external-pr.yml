@@ -1,4 +1,4 @@
-name: PR external
+name: 'Triage: Label external PRs'
 on:
   workflow_call:
     inputs:
@@ -10,7 +10,7 @@ on:
         description: 'Comma-separated list of labels to add to external PRs'
         type: string
         required: false
-        default: 'external,triage'
+        default: 'external,needs-triage'
   pull_request_target:
     types:
       - reopened
@@ -33,4 +33,4 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
           NUMBER: ${{ github.event.pull_request.number }}
-          LABELS: ${{ inputs.labels_to_add || 'external,triage' }}
+          LABELS: ${{ inputs.labels_to_add || 'external,needs-triage' }}
