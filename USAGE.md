@@ -25,6 +25,14 @@ jobs:
       issues: write
       pull-requests: write
 
+  close-from-default-branch:
+    if: github.event_name == 'pull_request_target' && github.event.action == 'opened'
+    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-close-from-default-branch.yml@main
+    with:
+      default_branch: 'development'
+    permissions:
+      pull-requests: write
+
   close-single-word:
     if: github.event_name == 'issues' && github.event.action == 'opened'
     uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-close-single-word-issues.yml@main
@@ -48,6 +56,14 @@ jobs:
     permissions:
       pull-requests: write
       repository-projects: read
+
+  pr-requirements:
+    needs: label-external-pr
+    if: github.event_name == 'pull_request_target'
+    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-pr-requirements.yml@main
+    permissions:
+      issues: read
+      pull-requests: write
 
   triage-issues:
     if: github.event_name == 'issues'
@@ -134,6 +150,23 @@ jobs:
       issues: write
 ```
 
+Create `.github/workflows/detect-spam.yml`:
+
+```yaml
+name: Spam Detection
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  spam:
+    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-detect-spam.yml@main
+    with:
+      project_context: 'GitHub Desktop is a GUI application for interacting with GitHub repositories on macOS and Windows. Issues should relate to the Desktop app, its features, installation, or Git operations through the app.'
+    secrets:
+      automation_token: ${{ secrets.DESKTOP_AUTOMATION_TOKEN }}
+```
+
 ## For cli/cli Repository
 
 Create or update `.github/workflows/triage.yml`:
@@ -155,6 +188,14 @@ jobs:
     permissions:
       contents: read
       issues: write
+      pull-requests: write
+
+  close-from-default-branch:
+    if: github.event_name == 'pull_request_target' && github.event.action == 'opened'
+    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-close-from-default-branch.yml@main
+    with:
+      default_branch: 'trunk'
+    permissions:
       pull-requests: write
 
   close-single-word:
@@ -180,6 +221,14 @@ jobs:
     permissions:
       pull-requests: write
       repository-projects: read
+
+  pr-requirements:
+    needs: label-external-pr
+    if: github.event_name == 'pull_request_target'
+    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-pr-requirements.yml@main
+    permissions:
+      issues: read
+      pull-requests: write
 
   triage-issues:
     if: github.event_name == 'issues'
@@ -264,6 +313,23 @@ jobs:
       exempt_issue_labels: 'never-stale,help wanted'
     permissions:
       issues: write
+```
+
+Create `.github/workflows/detect-spam.yml`:
+
+```yaml
+name: Spam Detection
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  spam:
+    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-detect-spam.yml@main
+    with:
+      project_context: 'The GitHub CLI (gh) is a command-line tool for interacting with GitHub. Issues should relate to CLI commands, authentication, extensions, or GitHub API interactions through the CLI.'
+    secrets:
+      automation_token: ${{ secrets.CLI_AUTOMATION_TOKEN }}
 ```
 
 ## Customization Options

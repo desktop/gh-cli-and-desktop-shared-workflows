@@ -1,0 +1,29 @@
+name: 'Triage: Close PRs from default branch'
+
+# Closes PRs that are accidentally opened from the repository's default branch.
+
+on:
+  workflow_call:
+    inputs:
+      default_branch:
+        description: 'Default branch name to check against (e.g., trunk, main, development)'
+        type: string
+        required: false
+        default: 'main'
+  pull_request_target:
+    types: [opened]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  close-from-default-branch:
+    runs-on: ubuntu-latest
+    if: startsWith(github.event.pull_request.head.label, format('{0}:{1}', github.repository_owner, inputs.default_branch || 'main'))
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      NUMBER: ${{ github.event.pull_request.number }}
+    steps:
+      - name: Close PR
+        run: gh pr close "$NUMBER"

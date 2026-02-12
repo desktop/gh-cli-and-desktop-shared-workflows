@@ -1,0 +1,69 @@
+name: 'Triage: Detect spam issues'
+
+# Uses AI to detect spam issues and automatically labels/closes them.
+# Each calling repository can provide project-specific context via the
+# project_context input to improve detection accuracy.
+
+on:
+  workflow_call:
+    inputs:
+      project_context:
+        description: 'Description of the project to help the AI understand what legitimate issues look like (e.g., "GitHub Desktop is a GUI application for interacting with GitHub repositories")'
+        type: string
+        required: false
+        default: ''
+      spam_label:
+        description: 'Label to add to detected spam issues'
+        type: string
+        required: false
+        default: 'suspected-spam'
+      invalid_label:
+        description: 'Additional label to add to detected spam issues'
+        type: string
+        required: false
+        default: 'invalid'
+      model:
+        description: 'AI model to use for spam detection'
+        type: string
+        required: false
+        default: 'openai/gpt-4o-mini'
+    secrets:
+      automation_token:
+        description: 'Token with permissions to comment, label, and close issues'
+        required: true
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: write
+  models: read
+
+jobs:
+  detect-spam:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout shared workflows
+        uses: actions/checkout@v6
+        with:
+          repository: desktop/gh-cli-and-desktop-shared-workflows
+          path: shared-workflows
+          sparse-checkout: .github/workflows/scripts/spam-detection
+
+      - name: Checkout calling repository (for issue templates)
+        uses: actions/checkout@v6
+        with:
+          path: calling-repo
+          sparse-checkout: .github/ISSUE_TEMPLATE
+
+      - name: Run spam detection
+        env:
+          GH_TOKEN: ${{ secrets.automation_token }}
+          ISSUE_URL: ${{ github.event.issue.html_url }}
+          PROJECT_CONTEXT: ${{ inputs.project_context }}
+          SPAM_LABEL: ${{ inputs.spam_label || 'suspected-spam' }}
+          INVALID_LABEL: ${{ inputs.invalid_label || 'invalid' }}
+          MODEL: ${{ inputs.model || 'openai/gpt-4o-mini' }}
+          TEMPLATE_DIR: calling-repo/.github/ISSUE_TEMPLATE
+        run: |
+          bash shared-workflows/.github/workflows/scripts/spam-detection/process-issue.sh "$ISSUE_URL"

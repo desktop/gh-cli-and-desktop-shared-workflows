@@ -1,0 +1,7 @@
+name: Detect spam
+model: openai/gpt-4o-mini
+messages:
+  - role: system
+    content: "" # Generated and replaced at runtime by generate-sys-prompt.sh
+  - role: user
+    content: "" # Replaced at runtime with issue title and body

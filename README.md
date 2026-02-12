@@ -365,6 +365,97 @@ jobs:
       discussion_token: ${{ secrets.CLI_DISCUSSION_TRIAGE_TOKEN }}
 ```
 
+### 15. Check PR Requirements (`triage-pr-requirements.yml`)
+Checks external PRs for minimum requirements (adequate description and a linked `help-wanted` issue). If requirements are not met, adds the `unmet-requirements` label, removes `needs-triage`, and comments with details. Automatically re-checks when the PR is edited and removes the label if requirements are now met (re-adding `needs-triage`). Auto-closes PRs that don't meet requirements after 7 days.
+
+**Triggers:**
+- `pull_request_target: [labeled, edited]` (triggers on `external` label or edits to PRs with `unmet-requirements`)
+- `schedule: (cron: '10 * * * *')` (hourly check for PRs past deadline)
+- `workflow_call`
+
+**Inputs:**
+- `min_body_length` (optional, default: 10): Minimum PR body length in characters
+- `help_wanted_label` (optional, default: 'help-wanted'): Label that must be on the referenced issue
+- `unmet_label` (optional, default: 'unmet-requirements'): Label to add when requirements are not met
+- `triage_label` (optional, default: 'needs-triage'): Triage label to manage
+- `external_label` (optional, default: 'external'): Label that identifies external PRs
+- `days_until_close` (optional, default: 7): Number of days before closing PRs with unmet requirements
+
+**Usage:**
+```yaml
+name: 'Triage: Check PR requirements'
+on:
+  pull_request_target:
+    types: [labeled, edited]
+  schedule:
+    - cron: '10 * * * *'
+
+jobs:
+  check:
+    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-pr-requirements.yml@main
+    permissions:
+      issues: read
+      pull-requests: write
+```
+
+### 16. Close PRs from Default Branch (`triage-close-from-default-branch.yml`)
+Automatically closes PRs that are accidentally opened from the repository's default branch.
+
+**Triggers:**
+- `pull_request_target: [opened]`
+- `workflow_call`
+
+**Inputs:**
+- `default_branch` (optional, default: 'main'): Default branch name to check against
+
+**Usage:**
+```yaml
+name: 'Triage: Close PRs from default branch'
+on:
+  pull_request_target:
+    types: [opened]
+
+jobs:
+  close:
+    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-close-from-default-branch.yml@main
+    with:
+      default_branch: 'trunk'
+    permissions:
+      pull-requests: write
+```
+
+### 17. Detect Spam Issues (`triage-detect-spam.yml`)
+Uses AI to automatically detect and close spam issues. The workflow sends the issue title and body to an AI model along with a system prompt that includes project context and the repository's issue templates. Each repository can provide custom project context to improve detection accuracy.
+
+**Triggers:**
+- `issues: [opened]`
+- `workflow_call`
+
+**Inputs:**
+- `project_context` (optional): Description of the project to help the AI understand what legitimate issues look like
+- `spam_label` (optional, default: 'suspected-spam'): Label to add to detected spam
+- `invalid_label` (optional, default: 'invalid'): Additional label to add to detected spam
+- `model` (optional, default: 'openai/gpt-4o-mini'): AI model to use
+
+**Secrets:**
+- `automation_token` (required): Token with permissions to comment, label, and close issues
+
+**Usage:**
+```yaml
+name: 'Triage: Detect spam issues'
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  spam:
+    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-detect-spam.yml@main
+    with:
+      project_context: 'GitHub Desktop is a GUI application for interacting with GitHub repositories on macOS and Windows.'
+    secrets:
+      automation_token: ${{ secrets.AUTOMATION_TOKEN }}
+```
+
 ## Using These Workflows
 
 To use these workflows in your repository, create thin workflow files in your `.github/workflows` directory that reference these shared workflows using the `uses` keyword with `workflow_call`.
@@ -393,6 +484,12 @@ jobs:
       issues: write
       pull-requests: write
 
+  close-from-default-branch:
+    if: github.event_name == 'pull_request_target' && github.event.action == 'opened'
+    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-close-from-default-branch.yml@main
+    permissions:
+      pull-requests: write
+
   close-single-word:
     if: github.event_name == 'issues' && github.event.action == 'opened'
     uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-close-single-word-issues.yml@main
@@ -411,6 +508,14 @@ jobs:
     permissions:
       pull-requests: write
       repository-projects: read
+
+  pr-requirements:
+    needs: label-external-pr
+    if: github.event_name == 'pull_request_target'
+    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-pr-requirements.yml@main
+    permissions:
+      issues: read
+      pull-requests: write
 
   triage-issues:
     if: github.event_name == 'issues'

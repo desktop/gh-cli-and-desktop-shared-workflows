@@ -1,0 +1,209 @@
+name: 'Triage: Check PR requirements'
+
+# Checks external PRs for minimum requirements:
+# 1. PR body must be at least 10 characters
+# 2. PR must reference an issue with the 'help-wanted' label
+# If requirements are not met, adds 'unmet-requirements' label and comments.
+# Also re-checks on PR edits and removes the label if requirements are now met.
+
+on:
+  workflow_call:
+    inputs:
+      min_body_length:
+        description: 'Minimum PR body length in characters'
+        type: number
+        required: false
+        default: 10
+      help_wanted_label:
+        description: 'Label that must be on the referenced issue'
+        type: string
+        required: false
+        default: 'help-wanted'
+      unmet_label:
+        description: 'Label to add when requirements are not met'
+        type: string
+        required: false
+        default: 'unmet-requirements'
+      triage_label:
+        description: 'Triage label to manage'
+        type: string
+        required: false
+        default: 'needs-triage'
+      external_label:
+        description: 'Label that identifies external PRs'
+        type: string
+        required: false
+        default: 'external'
+      days_until_close:
+        description: 'Number of days before closing PRs with unmet requirements'
+        type: number
+        required: false
+        default: 7
+  pull_request_target:
+    types: [labeled, edited]
+  schedule:
+    - cron: '10 * * * *'
+
+permissions:
+  issues: read
+  pull-requests: write
+
+jobs:
+  check-requirements:
+    runs-on: ubuntu-latest
+    # Run when 'external' label is added, or when a PR with 'unmet-requirements' is edited
+    # Skip draft PRs
+    if: |
+      !github.event.pull_request.draft &&
+      (
+        (github.event_name == 'pull_request_target' && github.event.action == 'labeled' && github.event.label.name == 'external') ||
+        (github.event_name == 'pull_request_target' && github.event.action == 'edited' && contains(github.event.pull_request.labels.*.name, 'unmet-requirements'))
+      )
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      NUMBER: ${{ github.event.pull_request.number }}
+    steps:
+      - name: Check PR requirements
+        id: check
+        env:
+          PRBODY: ${{ github.event.pull_request.body }}
+          MIN_LENGTH: ${{ inputs.min_body_length || 10 }}
+          HELP_WANTED_LABEL: ${{ inputs.help_wanted_label || 'help-wanted' }}
+        run: |
+          ISSUES_MET="false"
+          BODY_MET="false"
+          REASONS=""
+
+          # Check body length
+          BODY_LENGTH=$(echo -n "$PRBODY" | wc -c | tr -d ' ')
+          if [ "$BODY_LENGTH" -ge "$MIN_LENGTH" ]; then
+            BODY_MET="true"
+          else
+            REASONS="- PR description is missing or too short — please provide a detailed description"
+          fi
+
+          # Collect issue numbers from closingIssuesReferences (structured) and regex fallback (bare mentions)
+          CLOSING_ISSUES=$(gh pr view "$NUMBER" --json closingIssuesReferences --jq '.closingIssuesReferences[].number' 2>/dev/null || echo "")
+          REGEX_ISSUES=$(echo "$PRBODY" | grep -oE '#[0-9]+|issues/[0-9]+' | grep -oE '[0-9]+' || echo "")
+          ISSUE_NUMBERS=$(echo -e "$CLOSING_ISSUES\n$REGEX_ISSUES" | sort -u | grep -v '^$')
+
+          if [ -z "$ISSUE_NUMBERS" ]; then
+            REASONS="$REASONS
+          - No linked \`$HELP_WANTED_LABEL\` issue found in PR description"
+          else
+            # Check each referenced issue for help-wanted label
+            for ISSUE_NUM in $ISSUE_NUMBERS; do
+              LABELS=$(gh issue view "$ISSUE_NUM" --json labels --jq '.labels[].name' 2>/dev/null || echo "")
+              if echo "$LABELS" | grep -qx "$HELP_WANTED_LABEL"; then
+                ISSUES_MET="true"
+                break
+              fi
+            done
+            if [ "$ISSUES_MET" = "false" ]; then
+              REASONS="$REASONS
+          - None of the referenced issues have the \`$HELP_WANTED_LABEL\` label"
+            fi
+          fi
+
+          if [ "$BODY_MET" = "true" ] && [ "$ISSUES_MET" = "true" ]; then
+            echo "requirements_met=true" >> $GITHUB_OUTPUT
+          else
+            echo "requirements_met=false" >> $GITHUB_OUTPUT
+            EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+            echo "reasons<<$EOF" >> $GITHUB_OUTPUT
+            echo "$REASONS" >> $GITHUB_OUTPUT
+            echo "$EOF" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Add unmet-requirements label and comment
+        if: steps.check.outputs.requirements_met == 'false' && github.event.action == 'labeled'
+        env:
+          UNMET_LABEL: ${{ inputs.unmet_label || 'unmet-requirements' }}
+          TRIAGE_LABEL: ${{ inputs.triage_label || 'needs-triage' }}
+          DAYS: ${{ inputs.days_until_close || 7 }}
+          REASONS: ${{ steps.check.outputs.reasons }}
+        run: |
+          gh pr edit "$NUMBER" --add-label "$UNMET_LABEL" --remove-label "$TRIAGE_LABEL"
+
+          gh pr comment "$NUMBER" --body "Thanks for your pull request! Unfortunately, it doesn't meet the minimum requirements for review:
+
+          $REASONS
+
+          **Please update your PR to address the above.** Requirements:
+          1. Include a detailed description of what this PR does
+          2. Link to an issue with the \`${{ inputs.help_wanted_label || 'help-wanted' }}\` label (use \`Fixes #123\` or \`Closes #123\` if it resolves the issue)
+
+          This PR will be automatically closed in **$DAYS days** if these requirements are not met."
+
+      - name: Remove unmet-requirements label if now passing
+        if: steps.check.outputs.requirements_met == 'true' && github.event.action == 'edited'
+        env:
+          UNMET_LABEL: ${{ inputs.unmet_label || 'unmet-requirements' }}
+          TRIAGE_LABEL: ${{ inputs.triage_label || 'needs-triage' }}
+        run: |
+          gh pr edit "$NUMBER" --remove-label "$UNMET_LABEL" --add-label "$TRIAGE_LABEL"
+          gh pr comment "$NUMBER" --body "Thank you for updating your pull request! It now meets the minimum requirements and has been queued for triage."
+
+  close-unmet-requirements:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Close PRs with unmet requirements past deadline
+        env:
+          UNMET_LABEL: ${{ inputs.unmet_label || 'unmet-requirements' }}
+          DAYS: ${{ inputs.days_until_close || 7 }}
+          HELP_WANTED_LABEL: ${{ inputs.help_wanted_label || 'help-wanted' }}
+          MIN_LENGTH: ${{ inputs.min_body_length || 10 }}
+          TRIAGE_LABEL: ${{ inputs.triage_label || 'needs-triage' }}
+        run: |
+          CUTOFF_DATE=$(date -u -d "$DAYS days ago" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-${DAYS}d +%Y-%m-%dT%H:%M:%SZ)
+
+          gh pr list --label "$UNMET_LABEL" --state open --json number,createdAt,body,labels --jq '.[]' | while read -r PR_JSON; do
+            PR_NUM=$(echo "$PR_JSON" | jq -r '.number')
+            PRBODY=$(echo "$PR_JSON" | jq -r '.body // ""')
+
+            # Find when unmet-requirements label was added
+            LABEL_ADDED=$(gh api "repos/$GH_REPO/issues/$PR_NUM/events" --jq "[.[] | select(.event == \"labeled\" and .label.name == \"$UNMET_LABEL\")] | last | .created_at")
+
+            if [ -z "$LABEL_ADDED" ] || [ "$LABEL_ADDED" = "null" ]; then
+              continue
+            fi
+
+            if [[ "$LABEL_ADDED" < "$CUTOFF_DATE" ]]; then
+              # Skip draft PRs
+              IS_DRAFT=$(gh pr view "$PR_NUM" --json isDraft --jq '.isDraft' 2>/dev/null || echo "false")
+              if [ "$IS_DRAFT" = "true" ]; then
+                continue
+              fi
+
+              # Re-check requirements before closing
+              BODY_LENGTH=$(echo -n "$PRBODY" | wc -c | tr -d ' ')
+              ISSUES_MET="false"
+
+              if [ "$BODY_LENGTH" -ge "$MIN_LENGTH" ]; then
+                CLOSING_ISSUES=$(gh pr view "$PR_NUM" --json closingIssuesReferences --jq '.closingIssuesReferences[].number' 2>/dev/null || echo "")
+                REGEX_ISSUES=$(echo "$PRBODY" | grep -oE '#[0-9]+|issues/[0-9]+' | grep -oE '[0-9]+' || echo "")
+                ISSUE_NUMBERS=$(echo -e "$CLOSING_ISSUES\n$REGEX_ISSUES" | sort -u | grep -v '^$')
+
+                for ISSUE_NUM in $ISSUE_NUMBERS; do
+                  LABELS=$(gh issue view "$ISSUE_NUM" --json labels --jq '.labels[].name' 2>/dev/null || echo "")
+                  if echo "$LABELS" | grep -qx "$HELP_WANTED_LABEL"; then
+                    ISSUES_MET="true"
+                    break
+                  fi
+                done
+              fi
+
+              if [ "$ISSUES_MET" = "true" ] && [ "$BODY_LENGTH" -ge "$MIN_LENGTH" ]; then
+                # Requirements now met — remove label, restore triage
+                gh pr edit "$PR_NUM" --remove-label "$UNMET_LABEL" --add-label "$TRIAGE_LABEL"
+                gh pr comment "$PR_NUM" --body "Thank you for updating your pull request! It now meets the minimum requirements and has been queued for triage."
+              else
+                gh pr close "$PR_NUM"
+              fi
+            fi
+          done

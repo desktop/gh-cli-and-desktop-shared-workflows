@@ -35,4 +35,4 @@ jobs:
 
       - name: Add acknowledging comment
         run: |
-          gh pr comment "$NUMBER" --body "Thank you for your contribution! This pull request has been marked as ready for review. A team member will review it shortly."
+          gh pr comment "$NUMBER" --body "Thank you for your contribution! This pull request has been marked as ready for review."
