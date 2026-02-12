@@ -24,6 +24,27 @@ Shared GitHub Actions workflows for issue and PR triaging, used by the GH CLI an
 | [`triage-discuss.yml`](.github/workflows/triage-discuss.yml) | Creates linked discussion in internal repo | `issues/pull_request_target: [labeled]` |
 | [`triage-detect-spam.yml`](.github/workflows/triage-detect-spam.yml) | AI-powered spam detection on new issues | `issues: [opened]` |
 
+## Required Labels
+
+Repositories using these workflows need the following labels:
+
+| Label | Used by | Purpose |
+|-------|---------|---------|
+| `needs-triage` | label-incoming, remove-label-on-reply, on-issue-close, label-external-pr, ready-for-review, pr-requirements, stale-issues | Main triage tracking label |
+| `invalid` | close-invalid, detect-spam | Marks issues/PRs as invalid; auto-closes |
+| `suspected-spam` | close-invalid, detect-spam | Marks suspected spam; auto-closes |
+| `enhancement` | feature-request-comment | Triggers backlog comment |
+| `more-info-needed` | unable-to-reproduce-comment, no-response-close, remove-label-on-reply | Requests more info; auto-closes after 14 days |
+| `unable-to-reproduce` | unable-to-reproduce-comment | Triggers reproduction request comment |
+| `off-topic` | close-off-topic | Auto-closes with explanation |
+| `external` | label-external-pr, pr-requirements | Applied to PRs from non-org contributors |
+| `help-wanted` | pr-requirements | Must be on issues linked by external PRs |
+| `no-help-wanted-issue` | close-no-help-wanted | Auto-closes PRs without help-wanted issue |
+| `ready-for-review` | ready-for-review | Marks triaged PRs ready for review |
+| `unmet-requirements` | pr-requirements | PRs that don't meet minimum requirements |
+| `stale` | stale-issues | Applied to inactive issues |
+| `discuss` | discuss | Triggers linked internal discussion |
+
 ## Usage
 
 To use these workflows, create thin workflow files in your repository's `.github/workflows/` directory that reference these shared workflows via `workflow_call`.
