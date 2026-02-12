@@ -9,5 +9,5 @@ jobs:
     uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-detect-spam.yml@main
     with:
       project_context: 'Describe your project here to help the AI distinguish legitimate issues from spam.'
-    secrets:
-      automation_token: ${{ secrets.AUTOMATION_TOKEN }}
+    # secrets:
+    #   automation_token: ${{ secrets.AUTOMATION_TOKEN }}  # Optional; defaults to github.token

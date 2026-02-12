@@ -30,8 +30,8 @@ on:
         default: 'openai/gpt-4o-mini'
     secrets:
       automation_token:
-        description: 'Token with permissions to comment, label, and close issues'
-        required: true
+        description: 'Token with permissions to comment, label, and close issues (defaults to github.token)'
+        required: false
 
 permissions:
   contents: read
@@ -57,7 +57,7 @@ jobs:
 
       - name: Run spam detection
         env:
-          GH_TOKEN: ${{ secrets.automation_token }}
+          GH_TOKEN: ${{ secrets.automation_token || github.token }}
           ISSUE_URL: ${{ github.event.issue.html_url }}
           PROJECT_CONTEXT: ${{ inputs.project_context }}
           SPAM_LABEL: ${{ inputs.spam_label || 'suspected-spam' }}
