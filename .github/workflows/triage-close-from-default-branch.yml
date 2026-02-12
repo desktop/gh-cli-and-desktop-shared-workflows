@@ -24,5 +24,8 @@ jobs:
       GH_REPO: ${{ github.repository }}
       NUMBER: ${{ github.event.pull_request.number }}
     steps:
+      - name: Remove needs-triage label
+        run: gh pr edit "$NUMBER" --remove-label "needs-triage" || true
+
       - name: Close PR
         run: gh pr close "$NUMBER"

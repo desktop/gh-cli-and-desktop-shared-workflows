@@ -30,5 +30,8 @@ jobs:
 
           If you believe this was done in error, please let us know."
 
+      - name: Remove needs-triage label
+        run: gh pr edit "$NUMBER" --remove-label "needs-triage" || true
+
       - name: Close PR
         run: gh pr close "$NUMBER"

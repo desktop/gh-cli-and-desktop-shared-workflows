@@ -26,5 +26,8 @@ jobs:
         run: |
           gh issue comment "$NUMBER" --body "This issue has been closed as off-topic. If you believe this was done in error, please open a new issue with more details about how it relates to this project."
 
+      - name: Remove needs-triage label
+        run: gh issue edit "$NUMBER" --remove-label "needs-triage" || true
+
       - name: Close issue
         run: gh issue close "$NUMBER"
