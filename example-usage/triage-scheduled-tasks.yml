@@ -1,6 +1,7 @@
 # Place in .github/workflows/triage-scheduled-tasks.yml
 name: Triage Scheduled Tasks
 on:
+  workflow_dispatch:
   issue_comment:
     types: [created]
   schedule:
