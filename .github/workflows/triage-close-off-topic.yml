@@ -1,5 +1,6 @@
 name: 'Triage: Close off-topic issues'
 
+# Expected triggers: issues: [labeled]
 on:
   workflow_call:
     inputs:

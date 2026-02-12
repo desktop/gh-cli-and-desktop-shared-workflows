@@ -1,4 +1,5 @@
 name: 'Triage: Remove labels on issue close'
+# Expected triggers: issues: [closed]
 on:
   workflow_call:
     inputs:

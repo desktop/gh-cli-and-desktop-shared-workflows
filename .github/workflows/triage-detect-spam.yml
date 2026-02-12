@@ -1,5 +1,6 @@
 name: 'Triage: Detect spam issues'
 
+# Expected triggers: issues: [opened]
 # Uses AI to detect spam issues and automatically labels/closes them.
 # Each calling repository can provide project-specific context via the
 # project_context input to improve detection accuracy.

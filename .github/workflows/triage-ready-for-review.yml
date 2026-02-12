@@ -1,5 +1,6 @@
 name: 'Triage: Mark PR ready for review'
 
+# Expected triggers: pull_request_target: [labeled]
 on:
   workflow_call:
     inputs:

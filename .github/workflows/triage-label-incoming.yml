@@ -1,4 +1,5 @@
 name: 'Triage: Label incoming issues'
+# Expected triggers: issues: [opened, reopened, unlabeled]
 on:
   workflow_call:
     inputs:

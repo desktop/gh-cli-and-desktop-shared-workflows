@@ -1,4 +1,5 @@
 name: 'Triage: Remove triage label on reply'
+# Expected triggers: issues: [labeled]
 on:
   workflow_call:
     inputs:

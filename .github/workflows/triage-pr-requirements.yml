@@ -1,5 +1,6 @@
 name: 'Triage: Check PR requirements'
 
+# Expected triggers: pull_request_target: [labeled, edited], schedule
 # Checks external PRs for minimum requirements:
 # 1. PR body must be at least 10 characters
 # 2. PR must reference an issue with the 'help-wanted' label

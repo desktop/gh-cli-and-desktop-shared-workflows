@@ -1,4 +1,5 @@
 name: 'Triage: Mark stale issues and PRs'
+# Expected triggers: schedule
 on:
   workflow_call:
     inputs:

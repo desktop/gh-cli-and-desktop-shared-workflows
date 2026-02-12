@@ -1,4 +1,5 @@
 name: 'Triage: Create discussion for issue/PR'
+# Expected triggers: issues: [labeled], pull_request_target: [labeled]
 run-name: ${{ github.event_name == 'issues' && github.event.issue.title || github.event.pull_request.title }}
 
 on:

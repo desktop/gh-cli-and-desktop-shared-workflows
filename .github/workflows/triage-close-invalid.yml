@@ -1,5 +1,6 @@
 name: 'Triage: Close invalid issues/PRs'
 
+# Expected triggers: issues: [labeled], pull_request_target: [labeled]
 # **What it does**: This action closes issues and PRs that are labeled as invalid.
 
 on:

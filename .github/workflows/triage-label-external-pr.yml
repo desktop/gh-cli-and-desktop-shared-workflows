@@ -1,4 +1,5 @@
 name: 'Triage: Label external PRs'
+# Expected triggers: pull_request_target: [opened, reopened]
 on:
   workflow_call:
     inputs:

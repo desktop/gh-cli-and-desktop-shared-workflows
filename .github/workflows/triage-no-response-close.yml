@@ -1,5 +1,6 @@
 name: 'Triage: Close issues with no response'
 
+# Expected triggers: issue_comment: [created], schedule
 # Both `issue_comment` and `scheduled` event types are required for this Action
 # to work properly.
 on:

@@ -1,5 +1,6 @@
 name: 'Triage: Close PRs without help-wanted issue'
 
+# Expected triggers: pull_request_target: [labeled]
 on:
   workflow_call:
     inputs:

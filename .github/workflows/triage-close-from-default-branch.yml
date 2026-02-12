@@ -1,5 +1,6 @@
 name: 'Triage: Close PRs from default branch'
 
+# Expected triggers: pull_request_target: [opened]
 # Closes PRs that are accidentally opened from the repository's default branch.
 
 on:

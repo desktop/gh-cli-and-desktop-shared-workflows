@@ -1,5 +1,6 @@
 name: 'Triage: Close single-word issues'
 
+# Expected triggers: issues: [opened]
 on:
   workflow_call:
 

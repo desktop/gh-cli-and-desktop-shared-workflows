@@ -1,4 +1,5 @@
 name: 'Triage: Comment on unable-to-reproduce'
+# Expected triggers: issues: [labeled]
 on:
   workflow_call:
     inputs:
