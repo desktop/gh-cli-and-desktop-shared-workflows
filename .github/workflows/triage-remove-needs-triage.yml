@@ -12,7 +12,7 @@ on:
         description: 'Comma-separated list of labels that indicate triage is complete'
         type: string
         required: false
-        default: 'enhancement,ready-for-review,Priority-1,Priority-2,Priority-3'
+        default: 'enhancement,ready-for-review,priority-1,priority-2,priority-3'
 
 permissions:
   issues: write
@@ -24,7 +24,7 @@ jobs:
       - name: Check if label is an end-state label
         id: check-label
         run: |
-          END_STATE="${{ inputs.end_state_labels || 'enhancement,ready-for-review,Priority-1,Priority-2,Priority-3' }}"
+          END_STATE="${{ inputs.end_state_labels || 'enhancement,ready-for-review,priority-1,priority-2,priority-3' }}"
           CURRENT_LABEL="${{ github.event.label.name }}"
           
           if echo "$END_STATE" | tr ',' '\n' | grep -qx "$CURRENT_LABEL"; then

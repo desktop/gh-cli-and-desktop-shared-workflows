@@ -44,9 +44,9 @@ Repositories using these workflows need the following labels:
 | `unmet-requirements` | pr-requirements | PRs that don't meet minimum requirements |
 | `stale` | stale-issues | Applied to inactive issues |
 | `discuss` | discuss | Triggers linked internal discussion |
-| `Priority-1` | remove-needs-triage | End-state label; removes needs-triage |
-| `Priority-2` | remove-needs-triage | End-state label; removes needs-triage |
-| `Priority-3` | remove-needs-triage | End-state label; removes needs-triage |
+| `priority-1` | remove-needs-triage | End-state label; removes needs-triage |
+| `priority-2` | remove-needs-triage | End-state label; removes needs-triage |
+| `priority-3` | remove-needs-triage | End-state label; removes needs-triage |
 
 ## Usage
 
