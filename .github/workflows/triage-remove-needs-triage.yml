@@ -1,18 +1,18 @@
-name: 'Triage: Remove triage label on reply'
+name: 'Triage: Remove needs-triage label'
 # Expected triggers: issues: [labeled]
 on:
   workflow_call:
     inputs:
       label_to_remove:
-        description: 'Label to remove when other labels are added'
+        description: 'Label to remove when end-state labels are added'
         type: string
         required: false
         default: 'needs-triage'
-      excluded_labels:
-        description: 'Comma-separated list of labels that should not trigger removal (e.g., triage,more-info-needed)'
+      end_state_labels:
+        description: 'Comma-separated list of labels that indicate triage is complete'
         type: string
         required: false
-        default: 'needs-triage,more-info-needed'
+        default: 'enhancement,ready-for-review,Priority-1,Priority-2,Priority-3'
 
 permissions:
   issues: write
@@ -21,16 +21,16 @@ jobs:
   remove-triage-label-from-issues:
     runs-on: ubuntu-latest
     steps:
-      - name: Check if label should trigger removal
+      - name: Check if label is an end-state label
         id: check-label
         run: |
-          EXCLUDED="${{ inputs.excluded_labels || 'needs-triage,more-info-needed' }}"
+          END_STATE="${{ inputs.end_state_labels || 'enhancement,ready-for-review,Priority-1,Priority-2,Priority-3' }}"
           CURRENT_LABEL="${{ github.event.label.name }}"
           
-          if echo "$EXCLUDED" | grep -qw "$CURRENT_LABEL"; then
-            echo "should_remove=false" >> $GITHUB_OUTPUT
-          else
+          if echo "$END_STATE" | tr ',' '\n' | grep -qx "$CURRENT_LABEL"; then
             echo "should_remove=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_remove=false" >> $GITHUB_OUTPUT
           fi
         shell: bash
       

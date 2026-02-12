@@ -12,7 +12,7 @@ Shared GitHub Actions workflows for issue and PR triaging, used by the GH CLI an
 | [`triage-close-off-topic.yml`](.github/workflows/triage-close-off-topic.yml) | Comments and closes `off-topic` issues | `issues: [labeled]` |
 | [`triage-enhancement-comment.yml`](.github/workflows/triage-enhancement-comment.yml) | Posts backlog comment on `enhancement` label | `issues: [labeled]` |
 | [`triage-unable-to-reproduce-comment.yml`](.github/workflows/triage-unable-to-reproduce-comment.yml) | Requests more info on `unable-to-reproduce` label | `issues: [labeled]` |
-| [`triage-remove-label-on-reply.yml`](.github/workflows/triage-remove-label-on-reply.yml) | Removes `needs-triage` when classified | `issues: [labeled]` |
+| [`triage-remove-needs-triage.yml`](.github/workflows/triage-remove-needs-triage.yml) | Removes `needs-triage` when end-state labels are added | `issues: [labeled]` |
 | [`triage-on-issue-close.yml`](.github/workflows/triage-on-issue-close.yml) | Removes `needs-triage` on issue close | `issues: [closed]` |
 | [`triage-no-response-close.yml`](.github/workflows/triage-no-response-close.yml) | Closes `more-info-needed` issues after 14 days | `issue_comment` + `schedule` |
 | [`triage-stale-issues.yml`](.github/workflows/triage-stale-issues.yml) | Marks stale issues after inactivity | `schedule` |
@@ -30,20 +30,23 @@ Repositories using these workflows need the following labels:
 
 | Label | Used by | Purpose |
 |-------|---------|---------|
-| `needs-triage` | label-incoming, remove-label-on-reply, on-issue-close, label-external-pr, ready-for-review, pr-requirements, stale-issues | Main triage tracking label |
+| `needs-triage` | label-incoming, remove-needs-triage, on-issue-close, label-external-pr, ready-for-review, pr-requirements, stale-issues | Main triage tracking label |
 | `invalid` | close-invalid, detect-spam | Marks issues/PRs as invalid; auto-closes |
 | `suspected-spam` | close-invalid, detect-spam | Marks suspected spam; auto-closes |
-| `enhancement` | enhancement-comment | Triggers backlog comment |
-| `more-info-needed` | unable-to-reproduce-comment, no-response-close, remove-label-on-reply | Requests more info; auto-closes after 14 days |
+| `enhancement` | enhancement-comment, remove-needs-triage | Triggers backlog comment; end-state label |
+| `more-info-needed` | unable-to-reproduce-comment, no-response-close | Requests more info; auto-closes after 14 days |
 | `unable-to-reproduce` | unable-to-reproduce-comment | Triggers reproduction request comment |
 | `off-topic` | close-off-topic | Auto-closes with explanation |
 | `external` | label-external-pr, pr-requirements | Applied to PRs from non-org contributors |
 | `help-wanted` | pr-requirements | Must be on issues linked by external PRs |
 | `no-help-wanted-issue` | close-no-help-wanted | Auto-closes PRs without help-wanted issue |
-| `ready-for-review` | ready-for-review | Marks triaged PRs ready for review |
+| `ready-for-review` | ready-for-review, remove-needs-triage | Marks triaged PRs ready for review |
 | `unmet-requirements` | pr-requirements | PRs that don't meet minimum requirements |
 | `stale` | stale-issues | Applied to inactive issues |
 | `discuss` | discuss | Triggers linked internal discussion |
+| `Priority-1` | remove-needs-triage | End-state label; removes needs-triage |
+| `Priority-2` | remove-needs-triage | End-state label; removes needs-triage |
+| `Priority-3` | remove-needs-triage | End-state label; removes needs-triage |
 
 ## Usage
 

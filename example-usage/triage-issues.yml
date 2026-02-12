@@ -45,9 +45,9 @@ jobs:
     permissions:
       issues: write
 
-  remove-triage-label:
+  remove-needs-triage:
     if: github.event.action == 'labeled'
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-remove-label-on-reply.yml@main
+    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-remove-needs-triage.yml@main
     permissions:
       issues: write
 
