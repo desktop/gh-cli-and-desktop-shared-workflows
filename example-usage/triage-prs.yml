@@ -25,6 +25,7 @@ jobs:
     if: github.event.action == 'opened' || github.event.action == 'reopened'
     uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-label-external-pr.yml@main
     permissions:
+      issues: write
       pull-requests: write
       repository-projects: read
 
