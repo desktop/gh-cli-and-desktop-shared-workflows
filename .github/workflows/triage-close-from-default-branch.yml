@@ -10,8 +10,6 @@ on:
         type: string
         required: false
         default: 'main'
-  pull_request_target:
-    types: [opened]
 
 permissions:
   pull-requests: write

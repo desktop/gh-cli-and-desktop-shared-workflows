@@ -31,8 +31,6 @@ on:
       automation_token:
         description: 'Token with permissions to comment, label, and close issues'
         required: true
-  issues:
-    types: [opened]
 
 permissions:
   contents: read

@@ -11,10 +11,6 @@ on:
         type: string
         required: false
         default: 'external,needs-triage'
-  pull_request_target:
-    types:
-      - reopened
-      - opened
 
 jobs:
   label_issues:

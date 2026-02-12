@@ -7,9 +7,6 @@ on:
         type: string
         required: false
         default: 'needs-triage'
-  issues:
-    types:
-      - closed
 jobs:
   label_issues:
     runs-on: ubuntu-latest

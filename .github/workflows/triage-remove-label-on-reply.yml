@@ -12,9 +12,6 @@ on:
         type: string
         required: false
         default: 'needs-triage,more-info-needed'
-  issues:
-    types:
-      - labeled
 
 permissions:
   issues: write

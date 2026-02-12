@@ -13,8 +13,6 @@ on:
         type: string
         required: false
         default: 'needs-triage'
-  pull_request_target:
-    types: [labeled]
 
 permissions:
   pull-requests: write

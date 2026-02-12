@@ -8,8 +8,6 @@ on:
         type: string
         required: false
         default: 'off-topic'
-  issues:
-    types: [labeled]
 
 permissions:
   issues: write

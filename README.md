@@ -10,7 +10,7 @@ Shared GitHub Actions workflows for issue and PR triaging, used by the GH CLI an
 | [`triage-close-invalid.yml`](.github/workflows/triage-close-invalid.yml) | Closes issues/PRs labeled `invalid` or `suspected-spam` | `issues/pull_request_target: [labeled]` |
 | [`triage-close-single-word-issues.yml`](.github/workflows/triage-close-single-word-issues.yml) | Closes issues with single-word titles | `issues: [opened]` |
 | [`triage-close-off-topic.yml`](.github/workflows/triage-close-off-topic.yml) | Comments and closes `off-topic` issues | `issues: [labeled]` |
-| [`triage-feature-request-comment.yml`](.github/workflows/triage-feature-request-comment.yml) | Posts backlog comment on `enhancement` label | `issues: [labeled]` |
+| [`triage-enhancement-comment.yml`](.github/workflows/triage-enhancement-comment.yml) | Posts backlog comment on `enhancement` label | `issues: [labeled]` |
 | [`triage-unable-to-reproduce-comment.yml`](.github/workflows/triage-unable-to-reproduce-comment.yml) | Requests more info on `unable-to-reproduce` label | `issues: [labeled]` |
 | [`triage-remove-label-on-reply.yml`](.github/workflows/triage-remove-label-on-reply.yml) | Removes `needs-triage` when classified | `issues: [labeled]` |
 | [`triage-on-issue-close.yml`](.github/workflows/triage-on-issue-close.yml) | Removes `needs-triage` on issue close | `issues: [closed]` |
@@ -33,7 +33,7 @@ Repositories using these workflows need the following labels:
 | `needs-triage` | label-incoming, remove-label-on-reply, on-issue-close, label-external-pr, ready-for-review, pr-requirements, stale-issues | Main triage tracking label |
 | `invalid` | close-invalid, detect-spam | Marks issues/PRs as invalid; auto-closes |
 | `suspected-spam` | close-invalid, detect-spam | Marks suspected spam; auto-closes |
-| `enhancement` | feature-request-comment | Triggers backlog comment |
+| `enhancement` | enhancement-comment | Triggers backlog comment |
 | `more-info-needed` | unable-to-reproduce-comment, no-response-close, remove-label-on-reply | Requests more info; auto-closes after 14 days |
 | `unable-to-reproduce` | unable-to-reproduce-comment | Triggers reproduction request comment |
 | `off-topic` | close-off-topic | Auto-closes with explanation |
@@ -53,9 +53,9 @@ We recommend splitting into separate files by trigger type:
 
 | File | Triggers | Purpose |
 |------|----------|---------|
-| `triage-issues.yml` | `issues` + `issue_comment` | All issue triage workflows |
+| `triage-issues.yml` | `issues` | All issue triage workflows |
 | `triage-prs.yml` | `pull_request_target` | All PR workflows (isolated permissions) |
-| `stale.yml` | `schedule` | Stale issue marking |
+| `triage-scheduled-tasks.yml` | `schedule` + `issue_comment` | No-response close, PR requirements check, stale issues |
 | `detect-spam.yml` | `issues: [opened]` | AI spam detection (requires secrets) |
 
 **See [`example-usage/`](example-usage/) for ready-to-use workflow files** — copy them to your repo's `.github/workflows/` directory and customize inputs as needed.

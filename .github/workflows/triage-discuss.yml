@@ -26,12 +26,6 @@ on:
       discussion_token:
         description: 'Token with permissions to create issues in the target repo'
         required: true
-  issues:
-    types:
-      - labeled
-  pull_request_target:
-    types:
-      - labeled
 
 permissions: {}
 

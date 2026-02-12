@@ -3,8 +3,6 @@ name: Issue Triaging
 on:
   issues:
     types: [opened, reopened, labeled, unlabeled, closed]
-  issue_comment:
-    types: [created]
 
 jobs:
   label-incoming:
@@ -33,9 +31,9 @@ jobs:
     permissions:
       issues: write
 
-  feature-request-comment:
+  enhancement-comment:
     if: github.event.action == 'labeled'
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-feature-request-comment.yml@main
+    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-enhancement-comment.yml@main
     permissions:
       issues: write
 
@@ -43,7 +41,7 @@ jobs:
     if: github.event.action == 'labeled'
     uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-unable-to-reproduce-comment.yml@main
     # with:
-    #   log_menu_path: '`Help` > `Show Logs in Finder/Explorer`'
+    #   additional_context: '- a log file from the day you experienced the issue (access log files via `Help` > `Show Logs in Finder/Explorer`).'
     permissions:
       issues: write
 
@@ -56,12 +54,6 @@ jobs:
   on-issue-close:
     if: github.event.action == 'closed'
     uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-on-issue-close.yml@main
-    permissions:
-      issues: write
-
-  no-response:
-    if: github.event_name == 'issue_comment'
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-no-response-close.yml@main
     permissions:
       issues: write
 

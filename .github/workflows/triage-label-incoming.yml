@@ -12,11 +12,6 @@ on:
         type: string
         required: false
         default: 'more-info-needed'
-  issues:
-    types:
-      - reopened
-      - opened
-      - unlabeled
 
 permissions:
   issues: write

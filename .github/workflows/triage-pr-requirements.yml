@@ -39,10 +39,6 @@ on:
         type: number
         required: false
         default: 7
-  pull_request_target:
-    types: [labeled, edited]
-  schedule:
-    - cron: '10 * * * *'
 
 permissions:
   issues: read

@@ -1,4 +1,4 @@
-name: 'Triage: Comment on feature requests'
+name: 'Triage: Comment on enhancements'
 on:
   workflow_call:
     inputs:
@@ -6,15 +6,12 @@ on:
         description: 'URL to the help wanted label for the repository'
         type: string
         required: false
-  issues:
-    types:
-      - labeled
 
 permissions:
   issues: write
 
 jobs:
-  add-comment-to-feature-request-issues:
+  add-comment-to-enhancement-issues:
     if: github.event.label.name == 'enhancement'
     runs-on: ubuntu-latest
     env:
@@ -22,7 +19,7 @@ jobs:
       GH_REPO: ${{ github.repository }}
       NUMBER: ${{ github.event.issue.number }}
       BODY: >
-        Thank you for your issue! We have categorized it as a feature request,
+        Thank you for your issue! We have categorized it as an enhancement (feature or improvement) request,
         and it has been added to our backlog. In doing so, **we are not
         committing to implementing this feature at this time**, but, we will
         consider it for future releases based on community feedback and our own

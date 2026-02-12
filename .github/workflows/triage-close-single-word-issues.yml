@@ -2,9 +2,6 @@ name: 'Triage: Close single-word issues'
 
 on:
   workflow_call:
-  issues:
-    types:
-      - opened
 
 permissions:
   issues: write

@@ -8,8 +8,6 @@ on:
         type: string
         required: false
         default: 'no-help-wanted-issue'
-  pull_request_target:
-    types: [labeled]
 
 permissions:
   pull-requests: write

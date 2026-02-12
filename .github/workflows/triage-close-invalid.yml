@@ -4,12 +4,6 @@ name: 'Triage: Close invalid issues/PRs'
 
 on:
   workflow_call:
-  issues:
-    types: [labeled]
-  # Needed in lieu of `pull_request` so that PRs from a fork can be
-  # closed when marked as invalid.
-  pull_request_target:
-    types: [labeled]
 
 permissions:
   contents: read

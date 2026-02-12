@@ -15,11 +15,6 @@ on:
         type: string
         required: false
         default: 'more-info-needed'
-  issue_comment:
-    types: [created]
-  schedule:
-    # Schedule for five minutes after the hour, every hour
-    - cron: '5 * * * *'
 
 permissions:
   issues: write
