@@ -7,7 +7,7 @@ Shared GitHub Actions workflows for issue and PR triaging, used by the GH CLI an
 | Workflow | Description | Trigger |
 |----------|-------------|---------|
 | [`triage-label-incoming.yml`](.github/workflows/triage-label-incoming.yml) | Adds `needs-triage` label to new/reopened issues | `issues: [opened, reopened, unlabeled]` |
-| [`triage-close-invalid.yml`](.github/workflows/triage-close-invalid.yml) | Closes issues/PRs labeled `invalid` or `suspected-spam` | `issues/pull_request_target: [labeled]` |
+| [`triage-close-invalid.yml`](.github/workflows/triage-close-invalid.yml) | Closes issues/PRs labeled `invalid` | `issues/pull_request_target: [labeled]` |
 | [`triage-close-single-word-issues.yml`](.github/workflows/triage-close-single-word-issues.yml) | Closes issues with single-word titles | `issues: [opened]` |
 | [`triage-close-off-topic.yml`](.github/workflows/triage-close-off-topic.yml) | Comments and closes `off-topic` issues | `issues: [labeled]` |
 | [`triage-enhancement-comment.yml`](.github/workflows/triage-enhancement-comment.yml) | Posts backlog comment on `enhancement` label | `issues: [labeled]` |
@@ -23,6 +23,7 @@ Shared GitHub Actions workflows for issue and PR triaging, used by the GH CLI an
 | [`triage-ready-for-review.yml`](.github/workflows/triage-ready-for-review.yml) | Removes `needs-triage` and acknowledges PR | `pull_request_target: [labeled]` |
 | [`triage-discuss.yml`](.github/workflows/triage-discuss.yml) | Creates linked discussion in internal repo | `issues/pull_request_target: [labeled]` |
 | [`triage-detect-spam.yml`](.github/workflows/triage-detect-spam.yml) | AI-powered spam detection on new issues | `issues: [opened]` |
+| [`triage-close-suspected-spam.yml`](.github/workflows/triage-close-suspected-spam.yml) | Comments and closes `suspected-spam` issues | `issues: [labeled]` |
 
 ## Required Labels
 
@@ -31,8 +32,8 @@ Repositories using these workflows need the following labels:
 | Label | Used by | Purpose |
 |-------|---------|---------|
 | `needs-triage` | label-incoming, remove-needs-triage, on-issue-close, label-external-pr, ready-for-review, pr-requirements, stale-issues | Main triage tracking label |
-| `invalid` | close-invalid, detect-spam | Marks issues/PRs as invalid; auto-closes |
-| `suspected-spam` | close-invalid, detect-spam | Marks suspected spam; auto-closes |
+| `invalid` | close-invalid | Marks issues/PRs as invalid; auto-closes |
+| `suspected-spam` | close-suspected-spam, detect-spam | Marks suspected spam; auto-comments and closes |
 | `enhancement` | enhancement-comment, remove-needs-triage | Triggers backlog comment; end-state label |
 | `more-info-needed` | unable-to-reproduce-comment, no-response-close | Requests more info; auto-closes after 14 days |
 | `unable-to-reproduce` | unable-to-reproduce-comment | Triggers reproduction request comment |
@@ -73,7 +74,7 @@ Key inputs that differ between repositories:
 |-------|-------------|----------------|
 | `help_wanted_url` | URL to help-wanted label | `https://github.com/your-org/your-repo/labels/help%20wanted` |
 | `repository_org` | Org name for external PR detection | `cli`, `desktop` |
-| `log_menu_path` | How users access logs | GUI menu path vs CLI command |
+| `additional_context` | App-specific info for reproduce comment | Log file paths, debug steps |
 | `default_branch` | Default branch name | `main`, `trunk`, `development` |
 | `target_repo` | Internal repo for discuss workflow | `your-org/internal-repo` |
 | `project_context` | Project description for spam detection | Free text |

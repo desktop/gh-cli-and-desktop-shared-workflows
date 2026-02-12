@@ -24,17 +24,6 @@ fi
 
 echo "detected as spam: $_issue_url"
 
-cat << EOF | gh issue comment "$_issue_url" --body-file -
-Thank you for taking the time to create this issue.
+gh issue edit --add-label "${SPAM_LABEL:-suspected-spam}" "$_issue_url"
 
-We've automatically reviewed this issue and suspect it as potentially inauthentic or spam-like content. As a result, we're closing this issue.
-
-**If this was closed by mistake**, please don't hesitate to reach out to us by commenting on this issue with additional context.
-
-We appreciate your understanding and apologize if this action was taken in error. Our automated systems help us manage the large volume of issues we receive, but we know they're not perfect.
-EOF
-
-gh issue edit --add-label "${SPAM_LABEL:-suspected-spam}" --add-label "${INVALID_LABEL:-invalid}" "$_issue_url"
-gh issue close --reason 'not planned' "$_issue_url"
-
-echo "issue processed as suspected spam: commented, closed, and labeled"
+echo "issue labeled as suspected spam: $_issue_url"

@@ -19,6 +19,12 @@ jobs:
       issues: write
       pull-requests: write
 
+  close-suspected-spam:
+    if: github.event.action == 'labeled'
+    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-close-suspected-spam.yml@main
+    permissions:
+      issues: write
+
   close-single-word:
     if: github.event.action == 'opened'
     uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-close-single-word-issues.yml@main

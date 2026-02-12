@@ -1,0 +1,42 @@
+name: 'Triage: Close suspected spam'
+
+# Expected triggers: issues: [labeled]
+# Closes issues labeled as suspected spam with an explanatory comment.
+
+on:
+  workflow_call:
+    inputs:
+      spam_label:
+        description: 'Label that triggers this workflow'
+        type: string
+        required: false
+        default: 'suspected-spam'
+
+permissions:
+  issues: write
+
+jobs:
+  close-suspected-spam:
+    if: github.event.label.name == 'suspected-spam'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Comment on issue
+        run: |
+          cat << 'EOF' | gh issue comment "$ISSUE_URL" --body-file -
+          Thank you for taking the time to create this issue.
+
+          We've reviewed this issue and suspect it as potentially inauthentic or spam-like content. As a result, we're closing this issue.
+
+          **If this was closed by mistake**, please don't hesitate to reach out to us by commenting on this issue with additional context.
+
+          We appreciate your understanding and apologize if this action was taken in error.
+          EOF
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_URL: ${{ github.event.issue.html_url }}
+
+      - name: Close issue
+        run: gh issue close --reason 'not planned' "$ISSUE_URL"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_URL: ${{ github.event.issue.html_url }}

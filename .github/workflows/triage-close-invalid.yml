@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   close-on-adding-invalid-label:
-    if: github.event.label.name == 'invalid' || github.event.label.name == 'suspected-spam'
+    if: github.event.label.name == 'invalid'
     runs-on: ubuntu-latest
 
     steps:
