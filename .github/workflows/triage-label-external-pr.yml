@@ -19,6 +19,7 @@ jobs:
     # Check if PR is external by verifying if it starts with the repository org
     runs-on: ubuntu-latest
     permissions:
+      issues: write
       pull-requests: write
       repository-projects: read
     steps:
