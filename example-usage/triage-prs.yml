@@ -30,8 +30,7 @@ jobs:
       repository-projects: read
 
   pr-requirements:
-    needs: label-external-pr
-    if: always()
+    if: github.event.action == 'opened' || github.event.action == 'reopened' || github.event.action == 'edited'
     uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-pr-requirements.yml@main
     permissions:
       issues: read

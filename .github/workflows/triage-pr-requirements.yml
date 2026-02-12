@@ -1,6 +1,6 @@
 name: 'Triage: Check PR requirements'
 
-# Expected triggers: pull_request_target: [labeled, edited], schedule
+# Expected triggers: pull_request_target: [opened, reopened, edited], schedule
 # Checks external PRs for minimum requirements:
 # 1. PR body must be at least 10 characters
 # 2. PR must reference an issue with the 'help-wanted' label
@@ -35,6 +35,10 @@ on:
         type: string
         required: false
         default: 'external'
+      repository_org:
+        description: 'Organization name to check if PR is external'
+        type: string
+        required: false
       days_until_close:
         description: 'Number of days before closing PRs with unmet requirements'
         type: number
@@ -48,12 +52,12 @@ permissions:
 jobs:
   check-requirements:
     runs-on: ubuntu-latest
-    # Run when 'external' label is added, or when a PR with 'unmet-requirements' is edited
+    # Run on external PRs when opened/reopened, or when a PR with 'unmet-requirements' is edited
     # Skip draft PRs
     if: |
       !github.event.pull_request.draft &&
       (
-        (github.event_name == 'pull_request_target' && github.event.action == 'labeled' && github.event.label.name == 'external') ||
+        (github.event_name == 'pull_request_target' && (github.event.action == 'opened' || github.event.action == 'reopened') && startsWith(github.event.pull_request.head.label, format('{0}:', inputs.repository_org || github.repository_owner)) == false) ||
         (github.event_name == 'pull_request_target' && github.event.action == 'edited' && contains(github.event.pull_request.labels.*.name, 'unmet-requirements'))
       )
     env:
@@ -114,7 +118,7 @@ jobs:
           fi
 
       - name: Add unmet-requirements label and comment
-        if: steps.check.outputs.requirements_met == 'false' && github.event.action == 'labeled'
+        if: steps.check.outputs.requirements_met == 'false' && (github.event.action == 'opened' || github.event.action == 'reopened')
         env:
           UNMET_LABEL: ${{ inputs.unmet_label || 'unmet-requirements' }}
           TRIAGE_LABEL: ${{ inputs.triage_label || 'needs-triage' }}
