@@ -1,5 +1,6 @@
 name: 'Triage: Mark PR ready for review'
 
+# Expected triggers: pull_request_target: [labeled]
 on:
   workflow_call:
     inputs:
@@ -13,8 +14,6 @@ on:
         type: string
         required: false
         default: 'needs-triage'
-  pull_request_target:
-    types: [labeled]
 
 permissions:
   pull-requests: write

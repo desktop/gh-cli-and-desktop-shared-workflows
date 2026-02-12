@@ -1,4 +1,5 @@
 name: 'Triage: Mark stale issues and PRs'
+# Expected triggers: schedule
 on:
   workflow_call:
     inputs:
@@ -32,8 +33,6 @@ on:
         type: string
         required: false
         default: 'never-stale, help wanted'
-  schedule:
-    - cron: '30 1 * * *' # 1:30 AM UTC
 
 permissions:
   issues: write

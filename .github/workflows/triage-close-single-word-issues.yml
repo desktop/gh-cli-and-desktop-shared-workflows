@@ -1,10 +1,8 @@
 name: 'Triage: Close single-word issues'
 
+# Expected triggers: issues: [opened]
 on:
   workflow_call:
-  issues:
-    types:
-      - opened
 
 permissions:
   issues: write

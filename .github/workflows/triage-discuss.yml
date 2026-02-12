@@ -1,11 +1,12 @@
 name: 'Triage: Create discussion for issue/PR'
+# Expected triggers: issues: [labeled], pull_request_target: [labeled]
 run-name: ${{ github.event_name == 'issues' && github.event.issue.title || github.event.pull_request.title }}
 
 on:
   workflow_call:
     inputs:
       target_repo:
-        description: 'Internal repository where discussion issues are created (e.g., github/cli)'
+        description: 'Internal repository where discussion issues are created (e.g., your-org/internal-repo)'
         type: string
         required: true
       discuss_label:
@@ -19,19 +20,13 @@ on:
         required: false
         default: 'triage'
       cc_team:
-        description: 'Team to cc on the discussion issue (e.g., @github/cli)'
+        description: 'Team to cc on the discussion issue (e.g., @your-org/your-team)'
         type: string
         required: false
     secrets:
       discussion_token:
         description: 'Token with permissions to create issues in the target repo'
         required: true
-  issues:
-    types:
-      - labeled
-  pull_request_target:
-    types:
-      - labeled
 
 permissions: {}
 

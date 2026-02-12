@@ -1,618 +1,88 @@
-# gh-cli-and-desktop-shared-workflows
+# GH CLI and Desktop Shared Workflows
 
-A home for GH CLI and Desktop shared action workflows. These workflows provide automated triaging and issue management capabilities that can be reused across repositories.
-
-## Overview
-
-This repository houses shared GitHub Actions workflows for issue and pull request triaging. These workflows are designed to be reusable and can be referenced from other repositories like `cli/cli` and `desktop/desktop`.
+Shared GitHub Actions workflows for issue and PR triaging, used by the GH CLI and GitHub Desktop teams.
 
 ## Available Workflows
 
-### 1. Close Invalid Issues/PRs (`triage-close-invalid.yml`)
-Automatically closes issues and pull requests when labeled as `invalid` or `suspected-spam`.
+| Workflow | Description | Trigger |
+|----------|-------------|---------|
+| [`triage-label-incoming.yml`](.github/workflows/triage-label-incoming.yml) | Adds `needs-triage` label to new/reopened issues | `issues: [opened, reopened, unlabeled]` |
+| [`triage-close-invalid.yml`](.github/workflows/triage-close-invalid.yml) | Closes issues/PRs labeled `invalid` | `issues/pull_request_target: [labeled]` |
+| [`triage-close-single-word-issues.yml`](.github/workflows/triage-close-single-word-issues.yml) | Closes issues with single-word titles | `issues: [opened]` |
+| [`triage-close-off-topic.yml`](.github/workflows/triage-close-off-topic.yml) | Comments and closes `off-topic` issues | `issues: [labeled]` |
+| [`triage-enhancement-comment.yml`](.github/workflows/triage-enhancement-comment.yml) | Posts backlog comment on `enhancement` label | `issues: [labeled]` |
+| [`triage-unable-to-reproduce-comment.yml`](.github/workflows/triage-unable-to-reproduce-comment.yml) | Requests more info on `unable-to-reproduce` label | `issues: [labeled]` |
+| [`triage-remove-needs-triage.yml`](.github/workflows/triage-remove-needs-triage.yml) | Removes `needs-triage` when end-state labels are added | `issues: [labeled]` |
+| [`triage-on-issue-close.yml`](.github/workflows/triage-on-issue-close.yml) | Removes `needs-triage` on issue close | `issues: [closed]` |
+| [`triage-no-response-close.yml`](.github/workflows/triage-no-response-close.yml) | Closes `more-info-needed` issues after 14 days | `issue_comment` + `schedule` |
+| [`triage-stale-issues.yml`](.github/workflows/triage-stale-issues.yml) | Marks stale issues after inactivity | `schedule` |
+| [`triage-label-external-pr.yml`](.github/workflows/triage-label-external-pr.yml) | Labels PRs from external contributors | `pull_request_target: [opened, reopened]` |
+| [`triage-close-from-default-branch.yml`](.github/workflows/triage-close-from-default-branch.yml) | Closes accidental PRs from default branch | `pull_request_target: [opened]` |
+| [`triage-pr-requirements.yml`](.github/workflows/triage-pr-requirements.yml) | Checks external PRs for body + `help-wanted` issue | `pull_request_target: [labeled, edited]` + `schedule` |
+| [`triage-close-no-help-wanted.yml`](.github/workflows/triage-close-no-help-wanted.yml) | Closes PRs without a `help-wanted` issue | `pull_request_target: [labeled]` |
+| [`triage-ready-for-review.yml`](.github/workflows/triage-ready-for-review.yml) | Removes `needs-triage` and acknowledges PR | `pull_request_target: [labeled]` |
+| [`triage-discuss.yml`](.github/workflows/triage-discuss.yml) | Creates linked discussion in internal repo | `issues/pull_request_target: [labeled]` |
+| [`triage-detect-spam.yml`](.github/workflows/triage-detect-spam.yml) | AI-powered spam detection on new issues | `issues: [opened]` |
+| [`triage-close-suspected-spam.yml`](.github/workflows/triage-close-suspected-spam.yml) | Comments and closes `suspected-spam` issues | `issues: [labeled]` |
 
-**Triggers:**
-- `issues: [labeled]`
-- `pull_request_target: [labeled]`
-- `workflow_call`
+## Required Labels
 
-**Usage:**
+Repositories using these workflows need the following labels:
+
+| Label | Used by | Purpose |
+|-------|---------|---------|
+| `needs-triage` | label-incoming, remove-needs-triage, on-issue-close, label-external-pr, ready-for-review, pr-requirements, stale-issues | Main triage tracking label |
+| `invalid` | close-invalid | Marks issues/PRs as invalid; auto-closes |
+| `suspected-spam` | close-suspected-spam, detect-spam | Marks suspected spam; auto-comments and closes |
+| `enhancement` | enhancement-comment, remove-needs-triage | Triggers backlog comment; end-state label |
+| `more-info-needed` | unable-to-reproduce-comment, no-response-close | Requests more info; auto-closes after 14 days |
+| `unable-to-reproduce` | unable-to-reproduce-comment | Triggers reproduction request comment |
+| `off-topic` | close-off-topic | Auto-closes with explanation |
+| `external` | label-external-pr, pr-requirements | Applied to PRs from non-org contributors |
+| `help-wanted` | pr-requirements | Must be on issues linked by external PRs |
+| `no-help-wanted-issue` | close-no-help-wanted | Auto-closes PRs without help-wanted issue |
+| `ready-for-review` | ready-for-review, remove-needs-triage | Marks triaged PRs ready for review |
+| `unmet-requirements` | pr-requirements | PRs that don't meet minimum requirements |
+| `stale` | stale-issues | Applied to inactive issues |
+| `discuss` | discuss | Triggers linked internal discussion |
+| `priority-1` | remove-needs-triage | End-state label; removes needs-triage |
+| `priority-2` | remove-needs-triage | End-state label; removes needs-triage |
+| `priority-3` | remove-needs-triage | End-state label; removes needs-triage |
+
+## Usage
+
+To use these workflows, create thin workflow files in your repository's `.github/workflows/` directory that reference these shared workflows via `workflow_call`.
+
+We recommend splitting into separate files by trigger type:
+
+| File | Triggers | Purpose |
+|------|----------|---------|
+| `triage-issues.yml` | `issues` | All issue triage workflows |
+| `triage-prs.yml` | `pull_request_target` | All PR workflows (isolated permissions) |
+| `triage-scheduled-tasks.yml` | `schedule` + `issue_comment` | No-response close, PR requirements check, stale issues |
+| `detect-spam.yml` | `issues: [opened]` | AI spam detection (requires secrets) |
+
+**See [`example-usage/`](example-usage/) for ready-to-use workflow files** — copy them to your repo's `.github/workflows/` directory and customize inputs as needed.
+
+### Configurable Inputs
+
+Each workflow accepts optional inputs to customize behavior (labels, timeframes, messages, etc.). Click through to any workflow file above to see its available inputs and defaults.
+
+Key inputs that differ between repositories:
+
+| Input | Description | Example values |
+|-------|-------------|----------------|
+| `help_wanted_url` | URL to help-wanted label | `https://github.com/your-org/your-repo/labels/help%20wanted` |
+| `repository_org` | Org name for external PR detection | `cli`, `desktop` |
+| `additional_context` | App-specific info for reproduce comment | Log file paths, debug steps |
+| `default_branch` | Default branch name | `main`, `trunk`, `development` |
+| `target_repo` | Internal repo for discuss workflow | `your-org/internal-repo` |
+| `project_context` | Project description for spam detection | Free text |
+
+### Version Pinning
+
+The examples use `@main` for the latest version. For production, consider pinning to a specific SHA:
+
 ```yaml
-name: 'Triage: Close invalid issues/PRs'
-on:
-  issues:
-    types: [labeled]
-  pull_request_target:
-    types: [labeled]
-
-jobs:
-  close:
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-close-invalid.yml@main
-    permissions:
-      contents: read
-      issues: write
-      pull-requests: write
+uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-close-invalid.yml@abc123
 ```
-
-### 2. Close Single-Word Issues (`triage-close-single-word-issues.yml`)
-Automatically closes issues with single-word titles and labels them as invalid.
-
-**Triggers:**
-- `issues: [opened]`
-- `workflow_call`
-
-**Usage:**
-```yaml
-name: 'Triage: Close single-word issues'
-on:
-  issues:
-    types: [opened]
-
-jobs:
-  close:
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-close-single-word-issues.yml@main
-    permissions:
-      issues: write
-```
-
-### 3. Comment on Feature Requests (`triage-feature-request-comment.yml`)
-Adds a standardized comment when issues are labeled as `enhancement`.
-
-**Triggers:**
-- `issues: [labeled]` (triggers on `enhancement` label)
-- `workflow_call`
-
-**Inputs:**
-- `help_wanted_url` (optional): Custom URL to the help wanted label
-
-**Usage:**
-```yaml
-name: 'Triage: Comment on feature requests'
-on:
-  issues:
-    types: [labeled]
-
-jobs:
-  comment:
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-feature-request-comment.yml@main
-    permissions:
-      issues: write
-```
-
-### 4. Close Issues with No Response (`triage-no-response-close.yml`)
-Closes issues that haven't received a response after a specified period.
-
-**Triggers:**
-- `issue_comment: [created]`
-- `schedule: (cron: '5 * * * *')`
-- `workflow_call`
-
-**Inputs:**
-- `days_until_close` (optional, default: 14): Number of days before closing
-- `response_required_label` (optional, default: 'more-info-needed'): Label indicating response needed
-
-**Usage:**
-```yaml
-name: 'Triage: Close issues with no response'
-on:
-  issue_comment:
-    types: [created]
-  schedule:
-    - cron: '5 * * * *'
-
-jobs:
-  no-response:
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-no-response-close.yml@main
-    permissions:
-      issues: write
-```
-
-### 5. Remove Labels on Issue Close (`triage-on-issue-close.yml`)
-Removes the triage label when issues are closed.
-
-**Triggers:**
-- `issues: [closed]`
-- `workflow_call`
-
-**Inputs:**
-- `labels_to_remove` (optional, default: 'needs-triage'): Labels to remove
-
-**Usage:**
-```yaml
-name: 'Triage: Remove labels on issue close'
-on:
-  issues:
-    types: [closed]
-
-jobs:
-  remove-label:
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-on-issue-close.yml@main
-    permissions:
-      issues: write
-```
-
-### 6. Label External PRs (`triage-label-external-pr.yml`)
-Labels pull requests from external contributors.
-
-**Triggers:**
-- `pull_request_target: [opened, reopened]`
-- `workflow_call`
-
-**Inputs:**
-- `repository_org` (optional): Organization to check against (defaults to repo owner)
-- `labels_to_add` (optional, default: 'external,needs-triage'): Labels to add
-
-**Usage:**
-```yaml
-name: 'Triage: Label external PRs'
-on:
-  pull_request_target:
-    types: [opened, reopened]
-
-jobs:
-  label:
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-label-external-pr.yml@main
-    permissions:
-      pull-requests: write
-      repository-projects: read
-```
-
-### 7. Remove Triage Label on Reply (`triage-remove-label-on-reply.yml`)
-Removes the triage label when other labels are added to issues.
-
-**Triggers:**
-- `issues: [labeled]`
-- `workflow_call`
-
-**Inputs:**
-- `label_to_remove` (optional, default: 'needs-triage'): Label to remove
-- `excluded_labels` (optional, default: 'needs-triage,more-info-needed'): Labels that don't trigger removal
-
-**Usage:**
-```yaml
-name: 'Triage: Remove triage label on reply'
-on:
-  issues:
-    types: [labeled]
-
-jobs:
-  remove:
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-remove-label-on-reply.yml@main
-    permissions:
-      issues: write
-```
-
-### 8. Mark Stale Issues (`triage-stale-issues.yml`)
-Marks issues and PRs as stale after a period of inactivity.
-
-**Triggers:**
-- `schedule: (cron: '30 1 * * *')`
-- `workflow_call`
-
-**Inputs:**
-- `stale_issue_label` (optional, default: 'stale,needs-triage')
-- `start_date` (optional, default: '2024-11-25T00:00:00Z')
-- `days_before_stale` (optional, default: 365)
-- `days_before_close` (optional, default: -1)
-- `days_before_pr_stale` (optional, default: -1)
-- `exempt_issue_labels` (optional, default: 'never-stale, help wanted')
-
-**Usage:**
-```yaml
-name: 'Triage: Mark stale issues and PRs'
-on:
-  schedule:
-    - cron: '30 1 * * *'
-
-jobs:
-  stale:
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-stale-issues.yml@main
-    permissions:
-      issues: write
-```
-
-### 9. Label Incoming Issues (`triage-label-incoming.yml`)
-Labels new and reopened issues for triage.
-
-**Triggers:**
-- `issues: [opened, reopened, unlabeled]`
-- `workflow_call`
-
-**Inputs:**
-- `triage_label` (optional, default: 'needs-triage')
-- `more_info_label` (optional, default: 'more-info-needed')
-
-**Usage:**
-```yaml
-name: 'Triage: Label incoming issues'
-on:
-  issues:
-    types: [opened, reopened, unlabeled]
-
-jobs:
-  triage:
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-label-incoming.yml@main
-    permissions:
-      issues: write
-```
-
-### 10. Comment on Unable-to-Reproduce (`triage-unable-to-reproduce-comment.yml`)
-Adds a comment requesting more information when issues are labeled as unable to reproduce.
-
-**Triggers:**
-- `issues: [labeled]` (triggers on `unable-to-reproduce` label)
-- `workflow_call`
-
-**Inputs:**
-- `more_info_label` (optional, default: 'more-info-needed')
-- `unable_to_reproduce_label` (optional, default: 'unable-to-reproduce')
-- `log_menu_path` (optional): Custom path to access logs
-
-**Usage:**
-```yaml
-name: 'Triage: Comment on unable-to-reproduce'
-on:
-  issues:
-    types: [labeled]
-
-jobs:
-  comment:
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-unable-to-reproduce-comment.yml@main
-    permissions:
-      issues: write
-```
-
-### 11. Close Off-Topic Issues (`triage-close-off-topic.yml`)
-Adds an explanation comment and closes issues labeled as `off-topic`.
-
-**Triggers:**
-- `issues: [labeled]` (triggers on `off-topic` label)
-- `workflow_call`
-
-**Usage:**
-```yaml
-name: 'Triage: Close off-topic issues'
-on:
-  issues:
-    types: [labeled]
-
-jobs:
-  close:
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-close-off-topic.yml@main
-    permissions:
-      issues: write
-```
-
-### 12. Close PRs Without Help-Wanted Issue (`triage-close-no-help-wanted.yml`)
-Adds an explanation comment and closes PRs labeled as `no-help-wanted-issue`.
-
-**Triggers:**
-- `pull_request_target: [labeled]` (triggers on `no-help-wanted-issue` label)
-- `workflow_call`
-
-**Usage:**
-```yaml
-name: 'Triage: Close PRs without help-wanted issue'
-on:
-  pull_request_target:
-    types: [labeled]
-
-jobs:
-  close:
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-close-no-help-wanted.yml@main
-    permissions:
-      pull-requests: write
-```
-
-### 13. Mark PR Ready for Review (`triage-ready-for-review.yml`)
-Removes the `needs-triage` label and posts an acknowledging comment when PRs are labeled as `ready-for-review`.
-
-**Triggers:**
-- `pull_request_target: [labeled]` (triggers on `ready-for-review` label)
-- `workflow_call`
-
-**Inputs:**
-- `ready_label` (optional, default: 'ready-for-review'): Label that triggers this workflow
-- `triage_label` (optional, default: 'needs-triage'): Triage label to remove
-
-**Usage:**
-```yaml
-name: 'Triage: Mark PR ready for review'
-on:
-  pull_request_target:
-    types: [labeled]
-
-jobs:
-  ready:
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-ready-for-review.yml@main
-    permissions:
-      pull-requests: write
-```
-
-### 14. Create Discussion for Issue/PR (`triage-discuss.yml`)
-Creates a linked discussion issue in an internal repository when the `discuss` label is added to an issue or PR. This provides a place for private team commentary tied to the public issue.
-
-**Triggers:**
-- `issues: [labeled]` (triggers on `discuss` label)
-- `pull_request_target: [labeled]` (triggers on `discuss` label)
-- `workflow_call`
-
-**Inputs:**
-- `target_repo` (required): Internal repository where discussion issues are created (e.g., `github/cli`)
-- `discuss_label` (optional, default: 'discuss'): Label that triggers this workflow
-- `target_label` (optional, default: 'triage'): Label to apply to the created discussion issue
-- `cc_team` (optional): Team to cc on the discussion issue (e.g., `@github/cli`)
-
-**Secrets:**
-- `discussion_token` (required): Token with permissions to create issues in the target repo
-
-**Usage:**
-```yaml
-name: 'Triage: Create discussion for issue/PR'
-on:
-  issues:
-    types: [labeled]
-  pull_request_target:
-    types: [labeled]
-
-jobs:
-  discuss:
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-discuss.yml@main
-    with:
-      target_repo: 'github/cli'
-      cc_team: '@github/cli'
-    secrets:
-      discussion_token: ${{ secrets.CLI_DISCUSSION_TRIAGE_TOKEN }}
-```
-
-### 15. Check PR Requirements (`triage-pr-requirements.yml`)
-Checks external PRs for minimum requirements (adequate description and a linked `help-wanted` issue). If requirements are not met, adds the `unmet-requirements` label, removes `needs-triage`, and comments with details. Automatically re-checks when the PR is edited and removes the label if requirements are now met (re-adding `needs-triage`). Auto-closes PRs that don't meet requirements after 7 days.
-
-**Triggers:**
-- `pull_request_target: [labeled, edited]` (triggers on `external` label or edits to PRs with `unmet-requirements`)
-- `schedule: (cron: '10 * * * *')` (hourly check for PRs past deadline)
-- `workflow_call`
-
-**Inputs:**
-- `min_body_length` (optional, default: 10): Minimum PR body length in characters
-- `help_wanted_label` (optional, default: 'help-wanted'): Label that must be on the referenced issue
-- `unmet_label` (optional, default: 'unmet-requirements'): Label to add when requirements are not met
-- `triage_label` (optional, default: 'needs-triage'): Triage label to manage
-- `external_label` (optional, default: 'external'): Label that identifies external PRs
-- `days_until_close` (optional, default: 7): Number of days before closing PRs with unmet requirements
-
-**Usage:**
-```yaml
-name: 'Triage: Check PR requirements'
-on:
-  pull_request_target:
-    types: [labeled, edited]
-  schedule:
-    - cron: '10 * * * *'
-
-jobs:
-  check:
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-pr-requirements.yml@main
-    permissions:
-      issues: read
-      pull-requests: write
-```
-
-### 16. Close PRs from Default Branch (`triage-close-from-default-branch.yml`)
-Automatically closes PRs that are accidentally opened from the repository's default branch.
-
-**Triggers:**
-- `pull_request_target: [opened]`
-- `workflow_call`
-
-**Inputs:**
-- `default_branch` (optional, default: 'main'): Default branch name to check against
-
-**Usage:**
-```yaml
-name: 'Triage: Close PRs from default branch'
-on:
-  pull_request_target:
-    types: [opened]
-
-jobs:
-  close:
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-close-from-default-branch.yml@main
-    with:
-      default_branch: 'trunk'
-    permissions:
-      pull-requests: write
-```
-
-### 17. Detect Spam Issues (`triage-detect-spam.yml`)
-Uses AI to automatically detect and close spam issues. The workflow sends the issue title and body to an AI model along with a system prompt that includes project context and the repository's issue templates. Each repository can provide custom project context to improve detection accuracy.
-
-**Triggers:**
-- `issues: [opened]`
-- `workflow_call`
-
-**Inputs:**
-- `project_context` (optional): Description of the project to help the AI understand what legitimate issues look like
-- `spam_label` (optional, default: 'suspected-spam'): Label to add to detected spam
-- `invalid_label` (optional, default: 'invalid'): Additional label to add to detected spam
-- `model` (optional, default: 'openai/gpt-4o-mini'): AI model to use
-
-**Secrets:**
-- `automation_token` (required): Token with permissions to comment, label, and close issues
-
-**Usage:**
-```yaml
-name: 'Triage: Detect spam issues'
-on:
-  issues:
-    types: [opened]
-
-jobs:
-  spam:
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-detect-spam.yml@main
-    with:
-      project_context: 'GitHub Desktop is a GUI application for interacting with GitHub repositories on macOS and Windows.'
-    secrets:
-      automation_token: ${{ secrets.AUTOMATION_TOKEN }}
-```
-
-## Using These Workflows
-
-To use these workflows in your repository, create thin workflow files in your `.github/workflows` directory that reference these shared workflows using the `uses` keyword with `workflow_call`.
-
-### Example: Complete Triage Setup
-
-Create the following files in your repository's `.github/workflows` directory:
-
-**`.github/workflows/triage.yml`:**
-```yaml
-name: Issue Triage
-on:
-  issues:
-    types: [opened, reopened, labeled, unlabeled, closed]
-  pull_request_target:
-    types: [opened, reopened, labeled]
-  issue_comment:
-    types: [created]
-
-jobs:
-  close-invalid:
-    if: github.event_name == 'issues' || github.event_name == 'pull_request_target'
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-close-invalid.yml@main
-    permissions:
-      contents: read
-      issues: write
-      pull-requests: write
-
-  close-from-default-branch:
-    if: github.event_name == 'pull_request_target' && github.event.action == 'opened'
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-close-from-default-branch.yml@main
-    permissions:
-      pull-requests: write
-
-  close-single-word:
-    if: github.event_name == 'issues' && github.event.action == 'opened'
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-close-single-word-issues.yml@main
-    permissions:
-      issues: write
-
-  feature-request-comment:
-    if: github.event_name == 'issues' && github.event.action == 'labeled'
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-feature-request-comment.yml@main
-    permissions:
-      issues: write
-
-  label-external-pr:
-    if: github.event_name == 'pull_request_target'
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-label-external-pr.yml@main
-    permissions:
-      pull-requests: write
-      repository-projects: read
-
-  pr-requirements:
-    needs: label-external-pr
-    if: github.event_name == 'pull_request_target'
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-pr-requirements.yml@main
-    permissions:
-      issues: read
-      pull-requests: write
-
-  triage-issues:
-    if: github.event_name == 'issues'
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-label-incoming.yml@main
-    permissions:
-      issues: write
-
-  remove-triage-label:
-    if: github.event_name == 'issues' && github.event.action == 'labeled'
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-remove-label-on-reply.yml@main
-    permissions:
-      issues: write
-
-  on-issue-close:
-    if: github.event_name == 'issues' && github.event.action == 'closed'
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-on-issue-close.yml@main
-    permissions:
-      issues: write
-
-  unable-to-reproduce:
-    if: github.event_name == 'issues' && github.event.action == 'labeled'
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-unable-to-reproduce-comment.yml@main
-    permissions:
-      issues: write
-
-  close-off-topic:
-    if: github.event_name == 'issues' && github.event.action == 'labeled'
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-close-off-topic.yml@main
-    permissions:
-      issues: write
-
-  close-no-help-wanted:
-    if: github.event_name == 'pull_request_target' && github.event.action == 'labeled'
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-close-no-help-wanted.yml@main
-    permissions:
-      pull-requests: write
-
-  ready-for-review:
-    if: github.event_name == 'pull_request_target' && github.event.action == 'labeled'
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-ready-for-review.yml@main
-    permissions:
-      pull-requests: write
-
-  discuss:
-    if: (github.event_name == 'issues' || github.event_name == 'pull_request_target') && github.event.action == 'labeled'
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-discuss.yml@main
-    with:
-      target_repo: 'your-org/your-internal-repo'
-      cc_team: '@your-org/your-team'
-    secrets:
-      discussion_token: ${{ secrets.DISCUSSION_TRIAGE_TOKEN }}
-
-  no-response:
-    if: github.event_name == 'issue_comment'
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-no-response-close.yml@main
-    permissions:
-      issues: write
-```
-
-**`.github/workflows/stale.yml`:**
-```yaml
-name: Mark Stale Issues
-on:
-  schedule:
-    - cron: '30 1 * * *'
-
-jobs:
-  stale:
-    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-stale-issues.yml@main
-    permissions:
-      issues: write
-```
-
-## Generalization from desktop/desktop
-
-These workflows have been generalized from the [desktop/desktop repository](https://github.com/desktop/desktop) with the following changes:
-
-1. **Removed repository-specific checks**: The `github.repository == 'desktop/desktop'` condition has been removed to allow usage across multiple repositories.
-
-2. **Added `workflow_call` trigger**: All workflows now support the `workflow_call` trigger, making them reusable.
-
-3. **Added configurable inputs**: Many workflows now accept inputs to customize behavior (labels, timeframes, messages, etc.).
-
-4. **Generalized messages and URLs**: Desktop-specific references have been made configurable or generalized to work with any repository.
-
-5. **Maintained backward compatibility**: All original event triggers have been preserved, so these workflows can still function as standalone workflows if placed directly in a repository.
-
-## Contributing
-
-When adding new shared workflows or updating existing ones:
-
-1. Ensure workflows are generalized and not specific to any single repository
-2. Add appropriate `workflow_call` triggers and inputs
-3. Maintain backward compatibility with direct usage
-4. Document the workflow in this README
-5. Test the workflow in at least one consumer repository
-
-## License
-
-See [LICENSE](LICENSE) file for details.

@@ -1,8 +1,8 @@
 name: 'Triage: Detect spam issues'
 
-# Uses AI to detect spam issues and automatically labels/closes them.
-# Each calling repository can provide project-specific context via the
-# project_context input to improve detection accuracy.
+# Expected triggers: issues: [opened]
+# Uses AI to detect spam issues and labels them as suspected-spam.
+# The triage-close-suspected-spam workflow handles commenting and closing.
 
 on:
   workflow_call:
@@ -17,11 +17,6 @@ on:
         type: string
         required: false
         default: 'suspected-spam'
-      invalid_label:
-        description: 'Additional label to add to detected spam issues'
-        type: string
-        required: false
-        default: 'invalid'
       model:
         description: 'AI model to use for spam detection'
         type: string
@@ -29,10 +24,8 @@ on:
         default: 'openai/gpt-4o-mini'
     secrets:
       automation_token:
-        description: 'Token with permissions to comment, label, and close issues'
-        required: true
-  issues:
-    types: [opened]
+        description: 'Token with permissions to comment, label, and close issues (defaults to github.token)'
+        required: false
 
 permissions:
   contents: read
@@ -58,11 +51,10 @@ jobs:
 
       - name: Run spam detection
         env:
-          GH_TOKEN: ${{ secrets.automation_token }}
+          GH_TOKEN: ${{ secrets.automation_token || github.token }}
           ISSUE_URL: ${{ github.event.issue.html_url }}
           PROJECT_CONTEXT: ${{ inputs.project_context }}
           SPAM_LABEL: ${{ inputs.spam_label || 'suspected-spam' }}
-          INVALID_LABEL: ${{ inputs.invalid_label || 'invalid' }}
           MODEL: ${{ inputs.model || 'openai/gpt-4o-mini' }}
           TEMPLATE_DIR: calling-repo/.github/ISSUE_TEMPLATE
         run: |

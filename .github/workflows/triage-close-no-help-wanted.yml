@@ -1,5 +1,6 @@
 name: 'Triage: Close PRs without help-wanted issue'
 
+# Expected triggers: pull_request_target: [labeled]
 on:
   workflow_call:
     inputs:
@@ -8,8 +9,6 @@ on:
         type: string
         required: false
         default: 'no-help-wanted-issue'
-  pull_request_target:
-    types: [labeled]
 
 permissions:
   pull-requests: write
@@ -30,6 +29,9 @@ jobs:
           We encourage community contributions on issues labeled [\`help wanted\`](https://github.com/${{ github.repository }}/labels/help%20wanted). If you'd like to contribute, please find an open \`help wanted\` issue and link your PR to it.
 
           If you believe this was done in error, please let us know."
+
+      - name: Remove needs-triage label
+        run: gh pr edit "$NUMBER" --remove-label "needs-triage" || true
 
       - name: Close PR
         run: gh pr close "$NUMBER"

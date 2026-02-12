@@ -1,5 +1,6 @@
 name: 'Triage: Close PRs from default branch'
 
+# Expected triggers: pull_request_target: [opened]
 # Closes PRs that are accidentally opened from the repository's default branch.
 
 on:
@@ -10,8 +11,6 @@ on:
         type: string
         required: false
         default: 'main'
-  pull_request_target:
-    types: [opened]
 
 permissions:
   pull-requests: write
@@ -25,5 +24,8 @@ jobs:
       GH_REPO: ${{ github.repository }}
       NUMBER: ${{ github.event.pull_request.number }}
     steps:
+      - name: Remove needs-triage label
+        run: gh pr edit "$NUMBER" --remove-label "needs-triage" || true
+
       - name: Close PR
         run: gh pr close "$NUMBER"

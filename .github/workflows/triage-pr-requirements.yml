@@ -1,5 +1,6 @@
 name: 'Triage: Check PR requirements'
 
+# Expected triggers: pull_request_target: [labeled, edited], schedule
 # Checks external PRs for minimum requirements:
 # 1. PR body must be at least 10 characters
 # 2. PR must reference an issue with the 'help-wanted' label
@@ -39,10 +40,6 @@ on:
         type: number
         required: false
         default: 7
-  pull_request_target:
-    types: [labeled, edited]
-  schedule:
-    - cron: '10 * * * *'
 
 permissions:
   issues: read
@@ -203,6 +200,7 @@ jobs:
                 gh pr edit "$PR_NUM" --remove-label "$UNMET_LABEL" --add-label "$TRIAGE_LABEL"
                 gh pr comment "$PR_NUM" --body "Thank you for updating your pull request! It now meets the minimum requirements and has been queued for triage."
               else
+                gh pr edit "$PR_NUM" --remove-label "$TRIAGE_LABEL" || true
                 gh pr close "$PR_NUM"
               fi
             fi

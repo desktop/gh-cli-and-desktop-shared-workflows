@@ -1,4 +1,5 @@
 name: 'Triage: Remove labels on issue close'
+# Expected triggers: issues: [closed]
 on:
   workflow_call:
     inputs:
@@ -7,9 +8,6 @@ on:
         type: string
         required: false
         default: 'needs-triage'
-  issues:
-    types:
-      - closed
 jobs:
   label_issues:
     runs-on: ubuntu-latest
