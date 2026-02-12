@@ -5,7 +5,7 @@ on:
   workflow_call:
     inputs:
       target_repo:
-        description: 'Internal repository where discussion issues are created (e.g., github/cli)'
+        description: 'Internal repository where discussion issues are created (e.g., your-org/internal-repo)'
         type: string
         required: true
       discuss_label:
@@ -19,7 +19,7 @@ on:
         required: false
         default: 'triage'
       cc_team:
-        description: 'Team to cc on the discussion issue (e.g., @github/cli)'
+        description: 'Team to cc on the discussion issue (e.g., @your-org/your-team)'
         type: string
         required: false
     secrets:

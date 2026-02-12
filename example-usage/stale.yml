@@ -1,0 +1,11 @@
+# Place in .github/workflows/stale.yml
+name: Mark Stale Issues
+on:
+  schedule:
+    - cron: '30 1 * * *'
+
+jobs:
+  stale:
+    uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-stale-issues.yml@main
+    permissions:
+      issues: write
