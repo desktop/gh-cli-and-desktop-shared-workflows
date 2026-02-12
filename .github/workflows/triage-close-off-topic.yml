@@ -1,0 +1,31 @@
+name: 'Triage: Close off-topic issues'
+
+on:
+  workflow_call:
+    inputs:
+      off_topic_label:
+        description: 'Label that triggers this workflow'
+        type: string
+        required: false
+        default: 'off-topic'
+  issues:
+    types: [labeled]
+
+permissions:
+  issues: write
+
+jobs:
+  close-off-topic:
+    if: github.event.label.name == 'off-topic'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      NUMBER: ${{ github.event.issue.number }}
+    steps:
+      - name: Add comment
+        run: |
+          gh issue comment "$NUMBER" --body "This issue has been closed as off-topic. If you believe this was done in error, please open a new issue with more details about how it relates to this project."
+
+      - name: Close issue
+        run: gh issue close "$NUMBER"

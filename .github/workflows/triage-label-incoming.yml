@@ -1,0 +1,58 @@
+name: 'Triage: Label incoming issues'
+on:
+  workflow_call:
+    inputs:
+      triage_label:
+        description: 'Label to add to new and reopened issues'
+        type: string
+        required: false
+        default: 'needs-triage'
+      more_info_label:
+        description: 'Label that indicates more info is needed'
+        type: string
+        required: false
+        default: 'more-info-needed'
+  issues:
+    types:
+      - reopened
+      - opened
+      - unlabeled
+
+permissions:
+  issues: write
+
+jobs:
+  label_incoming_issues:
+    runs-on: ubuntu-latest
+    if: github.event.action == 'opened' || github.event.action == 'reopened'
+    steps:
+      - run: gh issue edit "$NUMBER" --add-label "$LABELS"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.issue.number }}
+          LABELS: ${{ inputs.triage_label || 'needs-triage' }}
+  label_more_info_issues:
+    runs-on: ubuntu-latest
+    if: github.event.action == 'unlabeled'
+    steps:
+      - name: Check if more-info-needed was removed
+        id: check
+        run: |
+          MORE_INFO_LABEL="${{ inputs.more_info_label || 'more-info-needed' }}"
+          REMOVED_LABEL="${{ github.event.label.name }}"
+          if [ "$REMOVED_LABEL" = "$MORE_INFO_LABEL" ]; then
+            echo "should_label=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_label=false" >> $GITHUB_OUTPUT
+          fi
+        shell: bash
+      
+      - name: Add triage label
+        if: steps.check.outputs.should_label == 'true'
+        run: gh issue edit "$NUMBER" --add-label "$LABELS"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.issue.number }}
+          LABELS: ${{ inputs.triage_label || 'needs-triage' }}

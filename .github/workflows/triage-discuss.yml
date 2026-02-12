@@ -1,0 +1,111 @@
+name: 'Triage: Create discussion for issue/PR'
+run-name: ${{ github.event_name == 'issues' && github.event.issue.title || github.event.pull_request.title }}
+
+on:
+  workflow_call:
+    inputs:
+      target_repo:
+        description: 'Internal repository where discussion issues are created (e.g., github/cli)'
+        type: string
+        required: true
+      discuss_label:
+        description: 'Label that triggers this workflow'
+        type: string
+        required: false
+        default: 'discuss'
+      target_label:
+        description: 'Label to apply to the created discussion issue'
+        type: string
+        required: false
+        default: 'triage'
+      cc_team:
+        description: 'Team to cc on the discussion issue (e.g., @github/cli)'
+        type: string
+        required: false
+    secrets:
+      discussion_token:
+        description: 'Token with permissions to create issues in the target repo'
+        required: true
+  issues:
+    types:
+      - labeled
+  pull_request_target:
+    types:
+      - labeled
+
+permissions: {}
+
+jobs:
+  issue:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'issues' && github.event.action == 'labeled' && github.event.label.name == (inputs.discuss_label || 'discuss')
+    steps:
+      - name: Create issue based on source issue
+        env:
+          BODY: ${{ github.event.issue.body }}
+          CC_TEAM: ${{ inputs.cc_team }}
+          CREATED: ${{ github.event.issue.created_at }}
+          GH_TOKEN: ${{ secrets.discussion_token }}
+          LINK: ${{ github.repository }}#${{ github.event.issue.number }}
+          TARGET_LABEL: ${{ inputs.target_label || 'triage' }}
+          TARGET_REPO: ${{ inputs.target_repo }}
+          TITLE: ${{ github.event.issue.title }}
+          TRIGGERED_BY: ${{ github.triggering_actor }}
+        run: |
+          # Markdown quote source body
+          BODY="${BODY//$'\n'/$'\n'> }"
+
+          CC_LINE=""
+          if [ -n "$CC_TEAM" ]; then
+            CC_LINE="cc: $CC_TEAM"
+          fi
+
+          cat << EOF | gh issue create --title "Triage issue \"$TITLE\"" --body-file - --repo "$TARGET_REPO" --label "$TARGET_LABEL"
+          **Title:** $TITLE
+          **Issue:** $LINK
+          **Created:** $CREATED
+          **Triggered by:** @$TRIGGERED_BY
+
+          ---
+
+          $CC_LINE
+
+          > $BODY
+          EOF
+
+  pull_request:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request_target' && github.event.action == 'labeled' && github.event.label.name == (inputs.discuss_label || 'discuss')
+    steps:
+      - name: Create issue based on source pull request
+        env:
+          BODY: ${{ github.event.pull_request.body }}
+          CC_TEAM: ${{ inputs.cc_team }}
+          CREATED: ${{ github.event.pull_request.created_at }}
+          GH_TOKEN: ${{ secrets.discussion_token }}
+          LINK: ${{ github.repository }}#${{ github.event.pull_request.number }}
+          TARGET_LABEL: ${{ inputs.target_label || 'triage' }}
+          TARGET_REPO: ${{ inputs.target_repo }}
+          TITLE: ${{ github.event.pull_request.title }}
+          TRIGGERED_BY: ${{ github.triggering_actor }}
+        run: |
+          # Markdown quote source body
+          BODY="${BODY//$'\n'/$'\n'> }"
+
+          CC_LINE=""
+          if [ -n "$CC_TEAM" ]; then
+            CC_LINE="cc: $CC_TEAM"
+          fi
+
+          cat << EOF | gh issue create --title "Triage PR \"$TITLE\"" --body-file - --repo "$TARGET_REPO" --label "$TARGET_LABEL"
+          **Title:** $TITLE
+          **Pull request:** $LINK
+          **Created:** $CREATED
+          **Triggered by:** @$TRIGGERED_BY
+
+          ---
+
+          $CC_LINE
+
+          > $BODY
+          EOF

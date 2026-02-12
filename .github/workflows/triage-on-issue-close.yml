@@ -1,0 +1,24 @@
+name: 'Triage: Remove labels on issue close'
+on:
+  workflow_call:
+    inputs:
+      labels_to_remove:
+        description: 'Comma-separated list of labels to remove on issue close'
+        type: string
+        required: false
+        default: 'needs-triage'
+  issues:
+    types:
+      - closed
+jobs:
+  label_issues:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - run: gh issue edit "$NUMBER" --remove-label "$LABELS"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.issue.number }}
+          LABELS: ${{ inputs.labels_to_remove || 'needs-triage' }}

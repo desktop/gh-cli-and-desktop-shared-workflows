@@ -1,0 +1,46 @@
+name: 'Triage: Remove triage label on reply'
+on:
+  workflow_call:
+    inputs:
+      label_to_remove:
+        description: 'Label to remove when other labels are added'
+        type: string
+        required: false
+        default: 'needs-triage'
+      excluded_labels:
+        description: 'Comma-separated list of labels that should not trigger removal (e.g., triage,more-info-needed)'
+        type: string
+        required: false
+        default: 'needs-triage,more-info-needed'
+  issues:
+    types:
+      - labeled
+
+permissions:
+  issues: write
+
+jobs:
+  remove-triage-label-from-issues:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if label should trigger removal
+        id: check-label
+        run: |
+          EXCLUDED="${{ inputs.excluded_labels || 'needs-triage,more-info-needed' }}"
+          CURRENT_LABEL="${{ github.event.label.name }}"
+          
+          if echo "$EXCLUDED" | grep -qw "$CURRENT_LABEL"; then
+            echo "should_remove=false" >> $GITHUB_OUTPUT
+          else
+            echo "should_remove=true" >> $GITHUB_OUTPUT
+          fi
+        shell: bash
+      
+      - name: Remove triage label
+        if: steps.check-label.outputs.should_remove == 'true'
+        run: gh issue edit "$NUMBER" --remove-label "$LABELS"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.issue.number }}
+          LABELS: ${{ inputs.label_to_remove || 'needs-triage' }}

@@ -1,0 +1,38 @@
+name: 'Triage: Mark PR ready for review'
+
+on:
+  workflow_call:
+    inputs:
+      ready_label:
+        description: 'Label that triggers this workflow'
+        type: string
+        required: false
+        default: 'ready-for-review'
+      triage_label:
+        description: 'Triage label to remove'
+        type: string
+        required: false
+        default: 'needs-triage'
+  pull_request_target:
+    types: [labeled]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  ready-for-review:
+    if: github.event.label.name == 'ready-for-review'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      NUMBER: ${{ github.event.pull_request.number }}
+    steps:
+      - name: Remove triage label
+        run: gh pr edit "$NUMBER" --remove-label "$LABELS"
+        env:
+          LABELS: ${{ inputs.triage_label || 'needs-triage' }}
+
+      - name: Add acknowledging comment
+        run: |
+          gh pr comment "$NUMBER" --body "Thank you for your contribution! This pull request has been marked as ready for review."
