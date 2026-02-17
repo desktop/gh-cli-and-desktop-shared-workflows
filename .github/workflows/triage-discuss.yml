@@ -19,6 +19,10 @@ on:
         type: string
         required: false
         default: 'triage'
+      environment:
+        description: 'GitHub Actions environment to use for accessing secrets'
+        type: string
+        required: false
       cc_team:
         description: 'Team to cc on the discussion issue (e.g., @your-org/your-team)'
         type: string
@@ -33,6 +37,7 @@ permissions: {}
 jobs:
   issue:
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || '' }}
     if: github.event_name == 'issues' && github.event.action == 'labeled' && github.event.label.name == (inputs.discuss_label || 'discuss')
     steps:
       - name: Create issue based on source issue
@@ -70,6 +75,7 @@ jobs:
 
   pull_request:
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || '' }}
     if: github.event_name == 'pull_request_target' && github.event.action == 'labeled' && github.event.label.name == (inputs.discuss_label || 'discuss')
     steps:
       - name: Create issue based on source pull request
