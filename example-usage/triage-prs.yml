@@ -3,8 +3,6 @@ name: PR Triaging
 on:
   pull_request_target:
     types: [opened, reopened, labeled, edited, synchronize]
-  pull_request_review:
-    types: [submitted]
 
 jobs:
   close-invalid:
@@ -59,8 +57,8 @@ jobs:
   #   secrets:
   #     discussion_token: ${{ secrets.DISCUSSION_TRIAGE_TOKEN }}
 
-  contributor-input-needed-apply:
-    if: github.event_name == 'pull_request_review' || (github.event_name == 'pull_request_target' && github.event.action == 'synchronize')
+  contributor-input-needed-remove:
+    if: github.event.action == 'synchronize'
     uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-contributor-input-needed.yml@main
     permissions:
       issues: write

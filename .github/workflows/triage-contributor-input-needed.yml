@@ -1,6 +1,6 @@
 name: 'Triage: Contributor input needed on PRs'
 
-# Expected triggers: pull_request_review: [submitted], pull_request_target: [synchronize], issue_comment: [created], schedule
+# Expected triggers: pull_request_target: [synchronize], issue_comment: [created], schedule
 on:
   workflow_call:
     inputs:
@@ -31,19 +31,29 @@ permissions:
 
 jobs:
   apply-label:
-    if: >-
-      github.event_name == 'pull_request_review' &&
-      github.event.review.state == 'changes_requested'
+    if: github.event_name == 'schedule'
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GH_REPO: ${{ github.repository }}
-      NUMBER: ${{ github.event.pull_request.number }}
     steps:
-      - name: Add contributor-input-needed label
+      - name: Auto-apply label to PRs with changes-requested reviews
         env:
           LABEL: ${{ inputs.input_needed_label || 'contributor-input-needed' }}
-        run: gh pr edit "$NUMBER" --add-label "$LABEL"
+          READY_LABEL: ${{ inputs.ready_for_review_label || 'ready-for-review' }}
+        run: |
+          # Find open PRs that have a "changes_requested" review but no contributor-input-needed label
+          gh pr list --state open --json number,labels,reviewDecision --jq \
+            ".[] | select(.reviewDecision == \"CHANGES_REQUESTED\") | select(.labels | map(.name) | index(\"$LABEL\") | not) | .number" | \
+          while read -r PR_NUM; do
+            # Skip PRs with ready-for-review label
+            HAS_READY=$(gh pr view "$PR_NUM" --json labels --jq ".labels[].name" | grep -qx "$READY_LABEL" && echo "true" || echo "false")
+            if [ "$HAS_READY" = "true" ]; then
+              continue
+            fi
+
+            gh pr edit "$PR_NUM" --add-label "$LABEL"
+          done
 
   remove-label:
     if: >-
