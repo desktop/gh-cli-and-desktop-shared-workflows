@@ -20,7 +20,7 @@ Shared GitHub Actions workflows for issue and PR triaging, used by the GH CLI an
 | [`triage-close-from-default-branch.yml`](.github/workflows/triage-close-from-default-branch.yml) | Closes accidental PRs from default branch | `pull_request_target: [opened]` |
 | [`triage-pr-requirements.yml`](.github/workflows/triage-pr-requirements.yml) | Checks external PRs for body + `help-wanted` issue | `pull_request_target: [opened, reopened, edited]` + `schedule` |
 | [`triage-close-no-help-wanted.yml`](.github/workflows/triage-close-no-help-wanted.yml) | Closes PRs without a `help-wanted` issue | `pull_request_target: [labeled]` |
-| [`triage-ready-for-review.yml`](.github/workflows/triage-ready-for-review.yml) | Removes `needs-triage` and acknowledges PR | `pull_request_target: [labeled]` |
+| [`triage-ready-for-review.yml`](.github/workflows/triage-ready-for-review.yml) | Removes `needs-triage` label when PR is ready for review | `pull_request_target: [labeled]` |
 | [`triage-contributor-input-needed.yml`](.github/workflows/triage-contributor-input-needed.yml) | Auto-labels PRs with changes requested, warns after inactivity, auto-closes | `pull_request_target: [synchronize]` + `issue_comment` + `schedule` |
 | [`triage-discuss.yml`](.github/workflows/triage-discuss.yml) | Creates linked discussion in internal repo | `issues/pull_request_target: [labeled]` |
 | [`triage-detect-spam.yml`](.github/workflows/triage-detect-spam.yml) | AI-powered spam detection on new issues | `issues: [opened]` |
