@@ -68,9 +68,13 @@ jobs:
           READY_LABEL: ${{ inputs.ready_for_review_label || 'ready-for-review' }}
           EXTERNAL_LABEL: ${{ inputs.external_label || 'external' }}
         run: |
-          # Find open external PRs that have a "changes_requested" review but no contributor-input-needed label
+          # Find open external PRs that have a "changes_requested" review, currently have the ready-for-review
+          # label, but do not yet have the contributor-input-needed label
           gh pr list --state open --label "$EXTERNAL_LABEL" --json number,labels,reviewDecision --jq \
-            ".[] | select(.reviewDecision == \"CHANGES_REQUESTED\") | select(.labels | map(.name) | index(\"$LABEL\") | not) | .number" | \
+            ".[] | select(.reviewDecision == \"CHANGES_REQUESTED\") \
+               | select(.labels | map(.name) | index(\"$READY_LABEL\")) \
+               | select(.labels | map(.name) | index(\"$LABEL\") | not) \
+               | .number" | \
           while read -r PR_NUM; do
             gh pr edit "$PR_NUM" --add-label "$LABEL" --remove-label "$READY_LABEL"
           done
