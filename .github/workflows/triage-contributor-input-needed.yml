@@ -1,6 +1,6 @@
 name: 'Triage: Contributor input needed on PRs'
 
-# Expected triggers: pull_request_target: [synchronize], issue_comment: [created], schedule
+# Expected triggers: pull_request_target: [labeled, synchronize], issue_comment: [created], schedule
 on:
   workflow_call:
     inputs:
@@ -35,6 +35,22 @@ permissions:
   pull-requests: write
 
 jobs:
+  manage-labels-on-labeled:
+    if: >-
+      github.event_name == 'pull_request_target' &&
+      github.event.action == 'labeled' &&
+      github.event.label.name == 'contributor-input-needed'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      NUMBER: ${{ github.event.pull_request.number }}
+    steps:
+      - name: Remove ready-for-review label
+        env:
+          READY_LABEL: ${{ inputs.ready_for_review_label || 'ready-for-review' }}
+        run: gh pr edit "$NUMBER" --remove-label "$READY_LABEL" || true
+
   apply-label:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
@@ -43,6 +59,10 @@ jobs:
       GH_REPO: ${{ github.repository }}
     steps:
       - name: Auto-apply label to PRs with changes-requested reviews
+        # Ideally this would run on the pull_request_review event for instant
+        # labeling, but that event's GITHUB_TOKEN does not have sufficient
+        # privileges to add labels. Instead, we detect changes-requested
+        # reviews on a schedule and apply the label here.
         env:
           LABEL: ${{ inputs.input_needed_label || 'contributor-input-needed' }}
           READY_LABEL: ${{ inputs.ready_for_review_label || 'ready-for-review' }}

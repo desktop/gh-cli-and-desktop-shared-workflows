@@ -58,7 +58,7 @@ jobs:
   #     discussion_token: ${{ secrets.DISCUSSION_TRIAGE_TOKEN }}
 
   contributor-input-needed-remove:
-    if: github.event.action == 'synchronize'
+    if: github.event.action == 'synchronize' || (github.event.action == 'labeled' && github.event.label.name == 'contributor-input-needed')
     uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-contributor-input-needed.yml@main
     permissions:
       issues: write
