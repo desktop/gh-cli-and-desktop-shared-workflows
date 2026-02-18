@@ -24,6 +24,11 @@ on:
         type: number
         required: false
         default: 7
+      external_label:
+        description: 'Label that identifies external PRs (only these PRs are targeted)'
+        type: string
+        required: false
+        default: 'external'
 
 permissions:
   issues: write
@@ -41,9 +46,10 @@ jobs:
         env:
           LABEL: ${{ inputs.input_needed_label || 'contributor-input-needed' }}
           READY_LABEL: ${{ inputs.ready_for_review_label || 'ready-for-review' }}
+          EXTERNAL_LABEL: ${{ inputs.external_label || 'external' }}
         run: |
-          # Find open PRs that have a "changes_requested" review but no contributor-input-needed label
-          gh pr list --state open --json number,labels,reviewDecision --jq \
+          # Find open external PRs that have a "changes_requested" review but no contributor-input-needed label
+          gh pr list --state open --label "$EXTERNAL_LABEL" --json number,labels,reviewDecision --jq \
             ".[] | select(.reviewDecision == \"CHANGES_REQUESTED\") | select(.labels | map(.name) | index(\"$LABEL\") | not) | .number" | \
           while read -r PR_NUM; do
             # Skip PRs with ready-for-review label
@@ -107,6 +113,7 @@ jobs:
         env:
           LABEL: ${{ inputs.input_needed_label || 'contributor-input-needed' }}
           READY_LABEL: ${{ inputs.ready_for_review_label || 'ready-for-review' }}
+          EXTERNAL_LABEL: ${{ inputs.external_label || 'external' }}
           WARN_DAYS: ${{ inputs.days_until_warn || 7 }}
           CLOSE_DAYS: ${{ inputs.days_until_close || 7 }}
         run: |
@@ -114,7 +121,7 @@ jobs:
 
           CLOSE_CUTOFF=$(date -u -d "$CLOSE_DAYS days ago" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-${CLOSE_DAYS}d +%Y-%m-%dT%H:%M:%SZ)
 
-          gh pr list --label "$LABEL" --state open --json number,labels,updatedAt --jq '.[]' | while read -r PR_JSON; do
+          gh pr list --label "$LABEL" --label "$EXTERNAL_LABEL" --state open --json number,labels,updatedAt --jq '.[]' | while read -r PR_JSON; do
             PR_NUM=$(echo "$PR_JSON" | jq -r '.number')
 
             # Skip PRs with ready-for-review label
