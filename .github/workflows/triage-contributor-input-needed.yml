@@ -128,8 +128,8 @@ jobs:
         env:
           LABEL: ${{ inputs.input_needed_label || 'contributor-input-needed' }}
           EXTERNAL_LABEL: ${{ inputs.external_label || 'external' }}
-          WARN_DAYS: ${{ inputs.days_until_warn || 7 }}
-          CLOSE_DAYS: ${{ inputs.days_until_close || 7 }}
+          WARN_DAYS: ${{ inputs.days_until_warn }}
+          CLOSE_DAYS: ${{ inputs.days_until_close }}
         run: |
           WARN_CUTOFF=$(date -u -d "$WARN_DAYS days ago" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-${WARN_DAYS}d +%Y-%m-%dT%H:%M:%SZ)
 
