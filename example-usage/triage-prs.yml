@@ -63,4 +63,5 @@ jobs:
     if: github.event_name == 'pull_request_review' || (github.event_name == 'pull_request_target' && github.event.action == 'synchronize')
     uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-contributor-input-needed.yml@main
     permissions:
+      issues: write
       pull-requests: write
