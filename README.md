@@ -21,6 +21,7 @@ Shared GitHub Actions workflows for issue and PR triaging, used by the GH CLI an
 | [`triage-pr-requirements.yml`](.github/workflows/triage-pr-requirements.yml) | Checks external PRs for body + `help-wanted` issue | `pull_request_target: [opened, reopened, edited]` + `schedule` |
 | [`triage-close-no-help-wanted.yml`](.github/workflows/triage-close-no-help-wanted.yml) | Closes PRs without a `help-wanted` issue | `pull_request_target: [labeled]` |
 | [`triage-ready-for-review.yml`](.github/workflows/triage-ready-for-review.yml) | Removes `needs-triage` and acknowledges PR | `pull_request_target: [labeled]` |
+| [`triage-contributor-input-needed.yml`](.github/workflows/triage-contributor-input-needed.yml) | Auto-labels PRs with changes requested, warns after inactivity, auto-closes | `pull_request_review` + `pull_request_target: [synchronize]` + `issue_comment` + `schedule` |
 | [`triage-discuss.yml`](.github/workflows/triage-discuss.yml) | Creates linked discussion in internal repo | `issues/pull_request_target: [labeled]` |
 | [`triage-detect-spam.yml`](.github/workflows/triage-detect-spam.yml) | AI-powered spam detection on new issues | `issues: [opened]` |
 | [`triage-close-suspected-spam.yml`](.github/workflows/triage-close-suspected-spam.yml) | Comments and closes `suspected-spam` issues | `issues: [labeled]` |
@@ -42,6 +43,7 @@ Repositories using these workflows need the following labels:
 | `help-wanted` | pr-requirements | Must be on issues linked by external PRs |
 | `no-help-wanted-issue` | close-no-help-wanted | Auto-closes PRs without help-wanted issue |
 | `ready-for-review` | ready-for-review, remove-needs-triage | Marks triaged PRs ready for review |
+| `contributor-input-needed` | contributor-input-needed | Applied when changes are requested; auto-warns and closes after inactivity |
 | `unmet-requirements` | pr-requirements | PRs that don't meet minimum requirements |
 | `stale` | stale-issues | Applied to inactive issues |
 | `discuss` | discuss | Triggers linked internal discussion |

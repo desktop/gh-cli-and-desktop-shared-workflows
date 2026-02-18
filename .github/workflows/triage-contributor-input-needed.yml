@@ -1,0 +1,162 @@
+name: 'Triage: Contributor input needed on PRs'
+
+# Expected triggers: pull_request_review: [submitted], pull_request_target: [synchronize], issue_comment: [created], schedule
+on:
+  workflow_call:
+    inputs:
+      input_needed_label:
+        description: 'Label to apply when contributor input is needed'
+        type: string
+        required: false
+        default: 'contributor-input-needed'
+      ready_for_review_label:
+        description: 'Label indicating the PR is ready for review (skip these PRs)'
+        type: string
+        required: false
+        default: 'ready-for-review'
+      days_until_warn:
+        description: 'Number of days of inactivity before leaving a warning comment'
+        type: number
+        required: false
+        default: 7
+      days_until_close:
+        description: 'Number of days of inactivity after warning before closing the PR'
+        type: number
+        required: false
+        default: 7
+
+permissions:
+  pull-requests: write
+
+jobs:
+  apply-label:
+    if: >-
+      github.event_name == 'pull_request_review' &&
+      github.event.review.state == 'changes_requested'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      NUMBER: ${{ github.event.pull_request.number }}
+    steps:
+      - name: Add contributor-input-needed label
+        env:
+          LABEL: ${{ inputs.input_needed_label || 'contributor-input-needed' }}
+        run: gh pr edit "$NUMBER" --add-label "$LABEL"
+
+  remove-label:
+    if: >-
+      (
+        github.event_name == 'pull_request_target' &&
+        github.event.action == 'synchronize'
+      ) ||
+      (
+        github.event_name == 'issue_comment' &&
+        github.event.issue.pull_request
+      )
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Check if author responded and remove label
+        env:
+          LABEL: ${{ inputs.input_needed_label || 'contributor-input-needed' }}
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request_target" ]; then
+            NUMBER="${{ github.event.pull_request.number }}"
+            AUTHOR="${{ github.event.pull_request.user.login }}"
+            ACTOR="${{ github.event.sender.login }}"
+          else
+            NUMBER="${{ github.event.issue.number }}"
+            AUTHOR=$(gh pr view "$NUMBER" --json author --jq '.author.login')
+            ACTOR="${{ github.event.comment.user.login }}"
+          fi
+
+          # Only remove label if the PR author is the one who responded
+          if [ "$ACTOR" != "$AUTHOR" ]; then
+            exit 0
+          fi
+
+          # Check if the label is present before trying to remove
+          HAS_LABEL=$(gh pr view "$NUMBER" --json labels --jq ".labels[].name" | grep -qx "$LABEL" && echo "true" || echo "false")
+
+          if [ "$HAS_LABEL" = "true" ]; then
+            gh pr edit "$NUMBER" --remove-label "$LABEL"
+          fi
+
+  warn-and-close:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Process stale contributor-input-needed PRs
+        env:
+          LABEL: ${{ inputs.input_needed_label || 'contributor-input-needed' }}
+          READY_LABEL: ${{ inputs.ready_for_review_label || 'ready-for-review' }}
+          WARN_DAYS: ${{ inputs.days_until_warn || 7 }}
+          CLOSE_DAYS: ${{ inputs.days_until_close || 7 }}
+        run: |
+          WARN_CUTOFF=$(date -u -d "$WARN_DAYS days ago" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-${WARN_DAYS}d +%Y-%m-%dT%H:%M:%SZ)
+
+          CLOSE_CUTOFF=$(date -u -d "$CLOSE_DAYS days ago" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-${CLOSE_DAYS}d +%Y-%m-%dT%H:%M:%SZ)
+
+          gh pr list --label "$LABEL" --state open --json number,labels,updatedAt --jq '.[]' | while read -r PR_JSON; do
+            PR_NUM=$(echo "$PR_JSON" | jq -r '.number')
+
+            # Skip PRs with ready-for-review label
+            HAS_READY=$(echo "$PR_JSON" | jq -r --arg label "$READY_LABEL" '.labels[].name | select(. == $label)' | head -1)
+            if [ -n "$HAS_READY" ]; then
+              continue
+            fi
+
+            # Find when the label was most recently added
+            LABEL_ADDED=$(gh api "repos/{owner}/{repo}/issues/$PR_NUM/events" --jq "[.[] | select(.event == \"labeled\" and .label.name == \"$LABEL\")] | last | .created_at")
+
+            if [ -z "$LABEL_ADDED" ] || [ "$LABEL_ADDED" = "null" ]; then
+              continue
+            fi
+
+            # Get the PR author
+            PR_AUTHOR=$(gh pr view "$PR_NUM" --json author --jq '.author.login')
+
+            # Check if the author has had any activity since the label was added
+            LAST_AUTHOR_ACTIVITY=$(gh api "repos/{owner}/{repo}/issues/$PR_NUM/timeline" --paginate --jq "
+              [.[] | select(
+                (.user.login // .actor.login // .author.login // \"\" | ascii_downcase) == (\"$PR_AUTHOR\" | ascii_downcase) and
+                (.event == \"commented\" or .event == \"committed\" or .event == \"head_ref_force_pushed\")
+              ) | .created_at // .committer.date // \"\"] | map(select(. != \"\")) | sort | last // \"\"
+            ")
+
+            # If author had activity after label was added, skip
+            if [ -n "$LAST_AUTHOR_ACTIVITY" ] && [ "$LAST_AUTHOR_ACTIVITY" != "null" ] && [[ "$LAST_AUTHOR_ACTIVITY" > "$LABEL_ADDED" ]]; then
+              continue
+            fi
+
+            # Check if the bot has already left a warning comment
+            BOT_WARNING=$(gh api "repos/{owner}/{repo}/issues/$PR_NUM/comments" --jq "[.[] | select(.user.login == \"github-actions[bot]\" and (.body | contains(\"we haven't heard back\")))] | last | .created_at // \"\"")
+
+            if [ -z "$BOT_WARNING" ] || [ "$BOT_WARNING" = "null" ] || [ "$BOT_WARNING" = "" ]; then
+              # No warning yet — check if label is old enough to warn
+              if [[ "$LABEL_ADDED" < "$WARN_CUTOFF" ]]; then
+                gh pr comment "$PR_NUM" --body "Hey @$PR_AUTHOR 👋 — we haven't heard back from you on the requested changes. If you're still working on this, please let us know by pushing updated commits or leaving a comment.
+
+          This PR will be automatically closed in **$CLOSE_DAYS days** if there is no further activity."
+              fi
+            else
+              # Warning already posted — check if warning is old enough to close
+              if [[ "$BOT_WARNING" < "$CLOSE_CUTOFF" ]]; then
+                # Verify no author activity since the warning
+                if [ -n "$LAST_AUTHOR_ACTIVITY" ] && [ "$LAST_AUTHOR_ACTIVITY" != "null" ] && [[ "$LAST_AUTHOR_ACTIVITY" > "$BOT_WARNING" ]]; then
+                  continue
+                fi
+
+                gh pr comment "$PR_NUM" --body "Closing this PR due to inactivity. Thank you for your contribution, @$PR_AUTHOR!
+
+          If you'd like to continue working on this, feel free to reopen the PR and we'll be happy to review it again."
+                gh pr close "$PR_NUM"
+              fi
+            fi
+          done
