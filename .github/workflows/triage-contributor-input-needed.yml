@@ -39,7 +39,7 @@ jobs:
     if: >-
       github.event_name == 'pull_request_target' &&
       github.event.action == 'labeled' &&
-      github.event.label.name == 'contributor-input-needed'
+      github.event.label.name == (inputs.input_needed_label || 'contributor-input-needed')
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
