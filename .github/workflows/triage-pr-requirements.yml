@@ -19,7 +19,7 @@ on:
         description: 'Label that must be on the referenced issue'
         type: string
         required: false
-        default: 'help-wanted'
+        default: 'help wanted'
       unmet_label:
         description: 'Label to add when requirements are not met'
         type: string
