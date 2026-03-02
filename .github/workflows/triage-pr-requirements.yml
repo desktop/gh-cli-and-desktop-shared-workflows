@@ -3,7 +3,7 @@ name: 'Triage: Check PR requirements'
 # Expected triggers: pull_request_target: [opened, reopened, edited], schedule
 # Checks external PRs for minimum requirements:
 # 1. PR body must be at least 10 characters
-# 2. PR must reference an issue with the 'help-wanted' label
+# 2. PR must reference an issue with the 'help wanted' label
 # If requirements are not met, adds 'unmet-requirements' label and comments.
 # Also re-checks on PR edits and removes the label if requirements are now met.
 
@@ -19,7 +19,7 @@ on:
         description: 'Label that must be on the referenced issue'
         type: string
         required: false
-        default: 'help-wanted'
+        default: 'help wanted'
       unmet_label:
         description: 'Label to add when requirements are not met'
         type: string
@@ -70,7 +70,7 @@ jobs:
         env:
           PRBODY: ${{ github.event.pull_request.body }}
           MIN_LENGTH: ${{ inputs.min_body_length || 10 }}
-          HELP_WANTED_LABEL: ${{ inputs.help_wanted_label || 'help-wanted' }}
+          HELP_WANTED_LABEL: ${{ inputs.help_wanted_label || 'help wanted' }}
         run: |
           ISSUES_MET="false"
           BODY_MET="false"
@@ -93,7 +93,7 @@ jobs:
             REASONS="$REASONS
           - No linked \`$HELP_WANTED_LABEL\` issue found in PR description"
           else
-            # Check each referenced issue for help-wanted label
+            # Check each referenced issue for help wanted label
             for ISSUE_NUM in $ISSUE_NUMBERS; do
               LABELS=$(gh issue view "$ISSUE_NUM" --json labels --jq '.labels[].name' 2>/dev/null || echo "")
               if echo "$LABELS" | grep -qx "$HELP_WANTED_LABEL"; then
@@ -133,7 +133,7 @@ jobs:
 
           **Please update your PR to address the above.** Requirements:
           1. Include a detailed description of what this PR does
-          2. Link to an issue with the \`${{ inputs.help_wanted_label || 'help-wanted' }}\` label (use \`Fixes #123\` or \`Closes #123\` if it resolves the issue)
+          2. Link to an issue with the \`${{ inputs.help_wanted_label || 'help wanted' }}\` label (use \`Fixes #123\` or \`Closes #123\` if it resolves the issue)
 
           This PR will be automatically closed in **$DAYS days** if these requirements are not met."
 
@@ -157,7 +157,7 @@ jobs:
         env:
           UNMET_LABEL: ${{ inputs.unmet_label || 'unmet-requirements' }}
           DAYS: ${{ inputs.days_until_close || 7 }}
-          HELP_WANTED_LABEL: ${{ inputs.help_wanted_label || 'help-wanted' }}
+          HELP_WANTED_LABEL: ${{ inputs.help_wanted_label || 'help wanted' }}
           MIN_LENGTH: ${{ inputs.min_body_length || 10 }}
           TRIAGE_LABEL: ${{ inputs.triage_label || 'needs-triage' }}
         run: |
