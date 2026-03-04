@@ -78,6 +78,7 @@ Key inputs that differ between repositories:
 | `default_branch` | Default branch name | `main`, `trunk`, `development` |
 | `target_repo` | Internal repo for discuss workflow | `your-org/internal-repo` |
 | `project_context` | Project description for spam detection | Free text |
+| `exclude_repo_admins` | Skip labeling issues from repo admins | `true`, `false` |
 
 ### Version Pinning
 
