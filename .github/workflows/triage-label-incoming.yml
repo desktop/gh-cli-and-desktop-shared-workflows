@@ -13,6 +13,11 @@ on:
         type: string
         required: false
         default: 'more-info-needed'
+      exclude_repo_admins:
+        description: 'Skip labeling issues opened by repo admins'
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   issues: write
@@ -22,12 +27,25 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event.action == 'opened' || github.event.action == 'reopened'
     steps:
-      - run: gh issue edit "$NUMBER" --add-label "$LABELS"
+      - name: Check author repo permission
+        if: inputs.exclude_repo_admins
+        id: permission
+        run: |
+          PERM=$(gh api "repos/${{ github.repository }}/collaborators/$USER/permission" --jq '.permission')
+          echo "permission=$PERM" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          USER: ${{ github.event.issue.user.login }}
+
+      - name: Add triage label
+        if: steps.permission.outputs.permission != 'admin'
+        run: gh issue edit "$NUMBER" --add-label "$LABELS"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
           NUMBER: ${{ github.event.issue.number }}
           LABELS: ${{ inputs.triage_label || 'needs-triage' }}
+
   label_more_info_issues:
     runs-on: ubuntu-latest
     if: github.event.action == 'unlabeled'
@@ -43,9 +61,21 @@ jobs:
             echo "should_label=false" >> $GITHUB_OUTPUT
           fi
         shell: bash
-      
+
+      - name: Check author repo permission
+        if: steps.check.outputs.should_label == 'true' && inputs.exclude_repo_admins
+        id: permission
+        run: |
+          PERM=$(gh api "repos/${{ github.repository }}/collaborators/$USER/permission" --jq '.permission')
+          echo "permission=$PERM" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          USER: ${{ github.event.issue.user.login }}
+
       - name: Add triage label
-        if: steps.check.outputs.should_label == 'true'
+        if: |
+          steps.check.outputs.should_label == 'true' &&
+          steps.permission.outputs.permission != 'admin'
         run: gh issue edit "$NUMBER" --add-label "$LABELS"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
