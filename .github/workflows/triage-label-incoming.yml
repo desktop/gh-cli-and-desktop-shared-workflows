@@ -31,7 +31,7 @@ jobs:
         if: inputs.exclude_repo_admins
         id: permission
         run: |
-          PERM=$(gh api "repos/${{ github.repository }}/collaborators/$USER/permission" --jq '.permission')
+          PERM=$(gh api "repos/${{ github.repository }}/collaborators/$USER/permission" --jq '.permission' 2>/dev/null) || PERM=""
           echo "permission=$PERM" >> $GITHUB_OUTPUT
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -66,7 +66,7 @@ jobs:
         if: steps.check.outputs.should_label == 'true' && inputs.exclude_repo_admins
         id: permission
         run: |
-          PERM=$(gh api "repos/${{ github.repository }}/collaborators/$USER/permission" --jq '.permission')
+          PERM=$(gh api "repos/${{ github.repository }}/collaborators/$USER/permission" --jq '.permission' 2>/dev/null) || PERM=""
           echo "permission=$PERM" >> $GITHUB_OUTPUT
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
