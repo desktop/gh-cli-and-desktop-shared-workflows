@@ -31,7 +31,3 @@ jobs:
         run: gh pr edit "$NUMBER" --remove-label "$LABELS"
         env:
           LABELS: ${{ inputs.triage_label || 'needs-triage' }}
-
-      - name: Add acknowledging comment
-        run: |
-          gh pr comment "$NUMBER" --body "Thank you for your contribution! This pull request has been marked as ready for review."
