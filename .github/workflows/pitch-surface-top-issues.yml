@@ -37,9 +37,11 @@ jobs:
           set -euo pipefail
 
           # Count how many issues already have the pitch label
+          # Use --limit to ensure accurate count beyond default pagination
           already_pitched=$(gh issue list \
             --label "$PITCH_LABEL" \
             --state open \
+            --limit "$MAX_PITCHED" \
             --json number \
             --jq 'length')
 
@@ -55,20 +57,21 @@ jobs:
           echo "Slots available: $slots_available"
 
           # Build exclude query for issues that already have the pitch label
-          exclude_query="-label:${PITCH_LABEL}"
+          # Quote label names to handle labels with spaces (e.g. "help wanted")
+          exclude_query="-label:\"${PITCH_LABEL}\""
 
           # Exclude additional labels if specified
           if [ -n "$EXCLUDE_LABELS" ]; then
             IFS=',' read -ra LABELS <<< "$EXCLUDE_LABELS"
             for label in "${LABELS[@]}"; do
               label=$(echo "$label" | xargs)  # trim whitespace
-              exclude_query="$exclude_query -label:${label}"
+              exclude_query="$exclude_query -label:\"${label}\""
             done
           fi
 
           echo "Exclude query: $exclude_query"
 
-          # Fetch top candidate issues by engagement (reactions)
+          # Fetch top candidate issues by interactions (reactions + comments)
           # Use -- to separate the query (which may contain -label:) from flags
           candidates=$(gh search issues \
             --repo "$GH_REPO" \
