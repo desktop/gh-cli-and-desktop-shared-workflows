@@ -1,0 +1,93 @@
+name: 'Pitch: Surface top community issues'
+# Expected triggers: schedule (monthly)
+on:
+  workflow_call:
+    inputs:
+      pitch_label:
+        description: 'Label to apply to surfaced issues'
+        type: string
+        required: false
+        default: 'pitch'
+      max_pitched:
+        description: 'Maximum number of issues with the pitch label at any time'
+        type: number
+        required: false
+        default: 30
+      exclude_labels:
+        description: 'Comma-separated list of labels to exclude from consideration'
+        type: string
+        required: false
+        default: ''
+
+permissions:
+  issues: write
+
+jobs:
+  surface_top_issues:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Surface top community issues by engagement
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          PITCH_LABEL: ${{ inputs.pitch_label || 'pitch' }}
+          MAX_PITCHED: ${{ inputs.max_pitched || 30 }}
+          EXCLUDE_LABELS: ${{ inputs.exclude_labels }}
+        run: |
+          set -euo pipefail
+
+          # Count how many issues already have the pitch label
+          # Use --limit to ensure accurate count beyond default pagination
+          already_pitched=$(gh issue list \
+            --label "$PITCH_LABEL" \
+            --state open \
+            --limit "$MAX_PITCHED" \
+            --json number \
+            --jq 'length')
+
+          echo "Currently pitched issues: $already_pitched"
+
+          slots_available=$((MAX_PITCHED - already_pitched))
+
+          if [ "$slots_available" -le 0 ]; then
+            echo "Already at or above the cap of $MAX_PITCHED pitched issues. Nothing to do."
+            exit 0
+          fi
+
+          echo "Slots available: $slots_available"
+
+          # Build search query excluding issues with the pitch label
+          search_query="repo:${GH_REPO} is:open is:issue -label:\"${PITCH_LABEL}\""
+
+          # Exclude additional labels if specified
+          if [ -n "$EXCLUDE_LABELS" ]; then
+            IFS=',' read -ra LABELS <<< "$EXCLUDE_LABELS"
+            for label in "${LABELS[@]}"; do
+              label=$(echo "$label" | xargs)  # trim whitespace
+              search_query="$search_query -label:\"${label}\""
+            done
+          fi
+
+          echo "Search query: $search_query"
+
+          # Fetch top candidate issues by interactions (reactions + comments)
+          # Uses the GitHub Search API directly for reliable label exclusion
+          candidates=$(gh api "search/issues" -X GET \
+            -f q="$search_query" \
+            -f sort=interactions \
+            -f order=desc \
+            -f per_page="$slots_available" \
+            --jq '.items[].number')
+
+          if [ -z "$candidates" ]; then
+            echo "No candidate issues found."
+            exit 0
+          fi
+
+          # Apply the pitch label to each candidate
+          for issue_number in $candidates; do
+            echo "Adding '$PITCH_LABEL' label to issue #$issue_number"
+            gh issue edit "$issue_number" --add-label "$PITCH_LABEL"
+          done
+
+          echo "Done. Labeled $(echo "$candidates" | wc -w | xargs) issues."
