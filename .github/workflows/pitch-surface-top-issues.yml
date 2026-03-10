@@ -69,15 +69,16 @@ jobs:
           echo "Exclude query: $exclude_query"
 
           # Fetch top candidate issues by engagement (reactions)
+          # Use -- to separate the query (which may contain -label:) from flags
           candidates=$(gh search issues \
-            "$exclude_query" \
             --repo "$GH_REPO" \
             --state open \
             --sort reactions \
             --order desc \
             --limit "$slots_available" \
             --json number \
-            --jq '.[].number')
+            --jq '.[].number' \
+            -- "$exclude_query")
 
           if [ -z "$candidates" ]; then
             echo "No candidate issues found."
