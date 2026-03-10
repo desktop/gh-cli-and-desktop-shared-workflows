@@ -73,7 +73,7 @@ jobs:
           candidates=$(gh search issues \
             --repo "$GH_REPO" \
             --state open \
-            --sort reactions \
+            --sort interactions \
             --order desc \
             --limit "$slots_available" \
             --json number \
