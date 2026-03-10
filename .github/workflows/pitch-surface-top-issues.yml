@@ -54,24 +54,27 @@ jobs:
 
           echo "Slots available: $slots_available"
 
-          # Build the search query for open issues sorted by reactions,
-          # excluding issues that already have the pitch label.
-          search_query="repo:${GH_REPO} is:issue is:open -label:${PITCH_LABEL} sort:reactions-desc"
+          # Build exclude query for issues that already have the pitch label
+          exclude_query="-label:${PITCH_LABEL}"
 
           # Exclude additional labels if specified
           if [ -n "$EXCLUDE_LABELS" ]; then
             IFS=',' read -ra LABELS <<< "$EXCLUDE_LABELS"
             for label in "${LABELS[@]}"; do
               label=$(echo "$label" | xargs)  # trim whitespace
-              search_query="$search_query -label:${label}"
+              exclude_query="$exclude_query -label:${label}"
             done
           fi
 
-          echo "Search query: $search_query"
+          echo "Exclude query: $exclude_query"
 
           # Fetch top candidate issues by engagement (reactions)
           candidates=$(gh search issues \
-            $search_query \
+            "$exclude_query" \
+            --repo "$GH_REPO" \
+            --state open \
+            --sort reactions \
+            --order desc \
             --limit "$slots_available" \
             --json number \
             --jq '.[].number')
