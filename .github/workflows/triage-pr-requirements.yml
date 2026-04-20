@@ -87,7 +87,7 @@ jobs:
           # Collect issue numbers from closingIssuesReferences (structured) and regex fallback (bare mentions)
           CLOSING_ISSUES=$(gh pr view "$NUMBER" --json closingIssuesReferences --jq '.closingIssuesReferences[].number' 2>/dev/null || echo "")
           REGEX_ISSUES=$(echo "$PRBODY" | grep -oE '#[0-9]+|issues/[0-9]+' | grep -oE '[0-9]+' || echo "")
-          ISSUE_NUMBERS=$(echo -e "$CLOSING_ISSUES\n$REGEX_ISSUES" | sort -u | grep -v '^$')
+          ISSUE_NUMBERS=$(echo -e "$CLOSING_ISSUES\n$REGEX_ISSUES" | sort -u | grep -v '^$' || true)
 
           if [ -z "$ISSUE_NUMBERS" ]; then
             REASONS="$REASONS
@@ -188,7 +188,7 @@ jobs:
               if [ "$BODY_LENGTH" -ge "$MIN_LENGTH" ]; then
                 CLOSING_ISSUES=$(gh pr view "$PR_NUM" --json closingIssuesReferences --jq '.closingIssuesReferences[].number' 2>/dev/null || echo "")
                 REGEX_ISSUES=$(echo "$PRBODY" | grep -oE '#[0-9]+|issues/[0-9]+' | grep -oE '[0-9]+' || echo "")
-                ISSUE_NUMBERS=$(echo -e "$CLOSING_ISSUES\n$REGEX_ISSUES" | sort -u | grep -v '^$')
+                ISSUE_NUMBERS=$(echo -e "$CLOSING_ISSUES\n$REGEX_ISSUES" | sort -u | grep -v '^$' || true)
 
                 for ISSUE_NUM in $ISSUE_NUMBERS; do
                   LABELS=$(gh issue view "$ISSUE_NUM" --json labels --jq '.labels[].name' 2>/dev/null || echo "")
