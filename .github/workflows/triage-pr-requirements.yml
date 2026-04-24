@@ -74,6 +74,21 @@ on:
         type: string
         required: false
         default: ''
+      smart_triage_large_pr_loc:
+        description: 'Minimum lines changed to consider a PR "large" for accelerated close'
+        type: number
+        required: false
+        default: 200
+      smart_triage_large_pr_files:
+        description: 'Minimum files changed to consider a PR "large" for accelerated close'
+        type: number
+        required: false
+        default: 5
+      smart_triage_large_pr_days:
+        description: 'Days before closing large unsolicited PRs (shorter than standard days_until_close)'
+        type: number
+        required: false
+        default: 3
 
 permissions:
   issues: read
@@ -343,10 +358,63 @@ jobs:
 
           **Note:** We still encourage linking to an issue with the \`${{ inputs.help_wanted_label || 'help wanted' }}\` label when possible, as it helps us prioritize and track contributions."
 
+      - name: Detect large unsolicited PRs
+        id: large_pr
+        if: |
+          inputs.enable_smart_triage &&
+          steps.check.outputs.requirements_met == 'false' &&
+          steps.fast_track.outputs.qualifies != 'true' &&
+          (github.event.action == 'opened' || github.event.action == 'reopened')
+        env:
+          LARGE_LOC: ${{ inputs.smart_triage_large_pr_loc || 200 }}
+          LARGE_FILES: ${{ inputs.smart_triage_large_pr_files || 5 }}
+          LARGE_DAYS: ${{ inputs.smart_triage_large_pr_days || 3 }}
+          UNMET_LABEL: ${{ inputs.unmet_label || 'unmet-requirements' }}
+          TRIAGE_LABEL: ${{ inputs.triage_label || 'needs-triage' }}
+        run: |
+          IS_LARGE="false"
+
+          PR_STATS=$(gh pr view "$NUMBER" --json additions,deletions,changedFiles,reviews --jq '{additions,deletions,changedFiles,reviews:[.reviews[].author.login]}' 2>/dev/null || echo "")
+          if [ -z "$PR_STATS" ]; then
+            echo "is_large=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          ADDITIONS=$(echo "$PR_STATS" | jq -r '.additions')
+          DELETIONS=$(echo "$PR_STATS" | jq -r '.deletions')
+          CHANGED_FILES=$(echo "$PR_STATS" | jq -r '.changedFiles')
+          TOTAL_LOC=$((ADDITIONS + DELETIONS))
+          HAS_REVIEWS=$(echo "$PR_STATS" | jq '.reviews | length > 0')
+
+          # Large PR: > threshold LOC, > threshold files, no team reviews
+          if [ "$TOTAL_LOC" -gt "$LARGE_LOC" ] && [ "$CHANGED_FILES" -gt "$LARGE_FILES" ] && [ "$HAS_REVIEWS" = "false" ]; then
+            IS_LARGE="true"
+          fi
+
+          echo "is_large=$IS_LARGE" >> $GITHUB_OUTPUT
+
+          if [ "$IS_LARGE" = "true" ]; then
+            gh pr edit "$NUMBER" --add-label "$UNMET_LABEL" --remove-label "$TRIAGE_LABEL"
+
+            gh pr comment "$NUMBER" --body "Thanks for your pull request! This is a large change ($TOTAL_LOC lines across $CHANGED_FILES files) that doesn't reference a \`${{ inputs.help_wanted_label || 'help wanted' }}\` issue.
+
+          Large feature PRs require prior discussion in an issue before implementation — this helps the team assess whether the feature aligns with the project's direction before significant effort is invested.
+
+          **Please open an issue to discuss this feature first.** This PR will be automatically closed in **$LARGE_DAYS days** if requirements are not met.
+
+          <details>
+          <summary>Full contribution requirements</summary>
+
+          1. Include a detailed description of what this PR does
+          2. Link to an issue with the \`${{ inputs.help_wanted_label || 'help wanted' }}\` label (use \`Fixes #123\` or \`Closes #123\`)
+          </details>"
+          fi
+
       - name: Add unmet-requirements label and comment
         if: |
           steps.check.outputs.requirements_met == 'false' &&
           steps.fast_track.outputs.qualifies != 'true' &&
+          steps.large_pr.outputs.is_large != 'true' &&
           (github.event.action == 'opened' || github.event.action == 'reopened')
         env:
           UNMET_LABEL: ${{ inputs.unmet_label || 'unmet-requirements' }}
@@ -356,15 +424,18 @@ jobs:
         run: |
           gh pr edit "$NUMBER" --add-label "$UNMET_LABEL" --remove-label "$TRIAGE_LABEL"
 
-          gh pr comment "$NUMBER" --body "Thanks for your pull request! Unfortunately, it doesn't meet the minimum requirements for review:
+          gh pr comment "$NUMBER" --body "Thanks for your pull request! Unfortunately, it doesn't meet the requirements for review:
 
           $REASONS
 
-          **Please update your PR to address the above.** Requirements:
-          1. Include a detailed description of what this PR does
-          2. Link to an issue with the \`${{ inputs.help_wanted_label || 'help wanted' }}\` label (use \`Fixes #123\` or \`Closes #123\` if it resolves the issue)
+          **Please update your PR to address the above.** This PR will be automatically closed in **$DAYS days** if these requirements are not met.
 
-          This PR will be automatically closed in **$DAYS days** if these requirements are not met."
+          <details>
+          <summary>Full contribution requirements</summary>
+
+          1. Include a detailed description of what this PR does
+          2. Link to an issue with the \`${{ inputs.help_wanted_label || 'help wanted' }}\` label (use \`Fixes #123\` or \`Closes #123\`)
+          </details>"
 
       - name: Remove unmet-requirements label if now passing
         if: steps.check.outputs.requirements_met == 'true' && github.event.action == 'edited'
