@@ -32,6 +32,13 @@ jobs:
   pr-requirements:
     if: github.event.action == 'opened' || github.event.action == 'reopened' || github.event.action == 'edited'
     uses: desktop/gh-cli-and-desktop-shared-workflows/.github/workflows/triage-pr-requirements.yml@main
+    # with:
+    #   # Opt-in to smart triage for better handling of external PRs:
+    #   # - Instantly closes spam PRs (zero changes, empty body, irrelevant paths)
+    #   # - Detects same-author resubmissions of recently closed PRs
+    #   # - Fast-tracks small, well-described fixes to triage instead of auto-closing
+    #   enable_smart_triage: true
+    #   smart_triage_spam_paths: '.circleci/,.devcontainer/'
     permissions:
       issues: read
       pull-requests: write

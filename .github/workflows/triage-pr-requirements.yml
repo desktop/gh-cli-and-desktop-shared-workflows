@@ -6,6 +6,11 @@ name: 'Triage: Check PR requirements'
 # 2. PR must reference an issue with the 'help wanted' label
 # If requirements are not met, adds 'unmet-requirements' label and comments.
 # Also re-checks on PR edits and removes the label if requirements are now met.
+#
+# Smart triage (opt-in via enable_smart_triage):
+# - Instantly closes spam PRs (zero files, empty body, irrelevant paths)
+# - Detects same-author resubmissions of recently closed PRs
+# - Fast-tracks small, focused contributions to triage instead of auto-closing
 
 on:
   workflow_call:
@@ -44,6 +49,31 @@ on:
         type: number
         required: false
         default: 7
+      enable_smart_triage:
+        description: 'Enable smart triage features (spam detection, resubmission detection, small-fix fast-track)'
+        type: boolean
+        required: false
+        default: false
+      smart_triage_max_loc:
+        description: 'Maximum lines changed (additions + deletions) for small-fix fast-track'
+        type: number
+        required: false
+        default: 30
+      smart_triage_max_files:
+        description: 'Maximum files changed for small-fix fast-track'
+        type: number
+        required: false
+        default: 3
+      smart_triage_min_body:
+        description: 'Minimum PR body length (after normalization) for small-fix fast-track'
+        type: number
+        required: false
+        default: 100
+      smart_triage_spam_paths:
+        description: 'Comma-separated path prefixes considered irrelevant (e.g., ".circleci/,.devcontainer/")'
+        type: string
+        required: false
+        default: ''
 
 permissions:
   issues: read
@@ -65,8 +95,165 @@ jobs:
       GH_REPO: ${{ github.repository }}
       NUMBER: ${{ github.event.pull_request.number }}
     steps:
+      - name: Detect and close spam PRs
+        id: spam
+        if: inputs.enable_smart_triage && (github.event.action == 'opened' || github.event.action == 'reopened')
+        env:
+          PRBODY: ${{ github.event.pull_request.body }}
+          SPAM_PATHS: ${{ inputs.smart_triage_spam_paths }}
+        run: |
+          IS_SPAM="false"
+          SPAM_REASON=""
+
+          # Get PR file stats
+          PR_DATA=$(gh pr view "$NUMBER" --json additions,deletions,changedFiles,files --jq '{additions,deletions,changedFiles,files:[.files[].path]}' 2>/dev/null || echo "")
+
+          if [ -z "$PR_DATA" ]; then
+            echo "is_spam=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          CHANGED_FILES=$(echo "$PR_DATA" | jq -r '.changedFiles')
+          ADDITIONS=$(echo "$PR_DATA" | jq -r '.additions')
+          DELETIONS=$(echo "$PR_DATA" | jq -r '.deletions')
+
+          # Check 1: Zero changed files
+          if [ "$CHANGED_FILES" -eq 0 ] && [ "$ADDITIONS" -eq 0 ] && [ "$DELETIONS" -eq 0 ]; then
+            IS_SPAM="true"
+            SPAM_REASON="This pull request contains no file changes."
+          fi
+
+          # Check 2: Normalize body and check length (use perl for multiline comment stripping)
+          if [ "$IS_SPAM" = "false" ]; then
+            NORMALIZED_BODY=$(echo "$PRBODY" | perl -0pe 's/<!--.*?-->//gs' | sed '/^[[:space:]]*$/d' | tr -s '[:space:]' ' ' | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
+            NORM_LENGTH=$(echo -n "$NORMALIZED_BODY" | wc -c | tr -d ' ')
+            if [ "$NORM_LENGTH" -lt 50 ]; then
+              IS_SPAM="true"
+              SPAM_REASON="This pull request has no meaningful description."
+            fi
+          fi
+
+          # Check 3: All changed files in irrelevant paths
+          if [ "$IS_SPAM" = "false" ] && [ -n "$SPAM_PATHS" ]; then
+            FILE_PATHS=$(echo "$PR_DATA" | jq -r '.files[]')
+            ALL_IRRELEVANT="true"
+
+            if [ -n "$FILE_PATHS" ]; then
+              echo "$FILE_PATHS" | while IFS= read -r filepath; do
+                MATCH="false"
+                IFS=',' read -ra PREFIXES <<< "$SPAM_PATHS"
+                for prefix in "${PREFIXES[@]}"; do
+                  prefix=$(echo "$prefix" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
+                  [ -z "$prefix" ] && continue
+                  if [[ "$filepath" == "$prefix"* ]]; then
+                    MATCH="true"
+                    break
+                  fi
+                done
+                if [ "$MATCH" = "false" ]; then
+                  echo "false" > /tmp/all_irrelevant
+                  break
+                fi
+              done
+
+              if [ -f /tmp/all_irrelevant ]; then
+                ALL_IRRELEVANT="false"
+                rm -f /tmp/all_irrelevant
+              fi
+            else
+              ALL_IRRELEVANT="false"
+            fi
+
+            if [ "$ALL_IRRELEVANT" = "true" ] && [ "$CHANGED_FILES" -gt 0 ]; then
+              IS_SPAM="true"
+              SPAM_REASON="This pull request only modifies files outside the scope of this project."
+            fi
+          fi
+
+          echo "is_spam=$IS_SPAM" >> $GITHUB_OUTPUT
+
+          if [ "$IS_SPAM" = "true" ]; then
+            gh pr comment "$NUMBER" --body "$SPAM_REASON This does not appear to be a meaningful contribution and has been closed automatically.
+
+          If this was closed by mistake, please comment with additional context and we'll be happy to reopen."
+            gh pr close "$NUMBER"
+          fi
+
+      - name: Detect same-author resubmissions
+        id: resubmission
+        if: inputs.enable_smart_triage && steps.spam.outputs.is_spam != 'true' && (github.event.action == 'opened' || github.event.action == 'reopened')
+        env:
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          UNMET_LABEL: ${{ inputs.unmet_label || 'unmet-requirements' }}
+        run: |
+          IS_RESUB="false"
+          PREV_PR=""
+
+          # Fetch recently closed PRs from same author with unmet-requirements (single call)
+          CLOSED_PRS_JSON=$(gh pr list --state closed --author "$PR_AUTHOR" --label "$UNMET_LABEL" --limit 10 --json number,title,files,closedAt 2>/dev/null || echo "[]")
+
+          if [ "$(echo "$CLOSED_PRS_JSON" | jq 'length')" -eq 0 ]; then
+            echo "is_resubmission=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Get this PR's files
+          CURRENT_FILES=$(gh pr view "$NUMBER" --json files --jq '[.files[].path] | sort' 2>/dev/null || echo "[]")
+          CURRENT_FILE_COUNT=$(echo "$CURRENT_FILES" | jq 'length')
+
+          if [ "$CURRENT_FILE_COUNT" -eq 0 ]; then
+            echo "is_resubmission=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Check each closed PR for file overlap within 30-day window
+          CUTOFF=$(date -u -d "30 days ago" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-30d +%Y-%m-%dT%H:%M:%SZ)
+
+          echo "$CLOSED_PRS_JSON" | jq -c '.[]' | while IFS= read -r pr_json; do
+            CLOSED_AT=$(echo "$pr_json" | jq -r '.closedAt // ""')
+
+            # Skip PRs closed more than 30 days ago
+            if [ -n "$CLOSED_AT" ] && [[ "$CLOSED_AT" < "$CUTOFF" ]]; then
+              continue
+            fi
+
+            PREV_NUM=$(echo "$pr_json" | jq -r '.number')
+            PREV_FILES=$(echo "$pr_json" | jq '[.files[].path] | sort')
+
+            # Calculate overlapping files
+            OVERLAP=$(jq -n --argjson a "$CURRENT_FILES" --argjson b "$PREV_FILES" '[$a[] as $f | select($b | index($f))] | length')
+
+            # Require ≥2 overlapping files, or full overlap for small PRs (1-2 files)
+            if ([ "$OVERLAP" -ge 2 ] || ([ "$CURRENT_FILE_COUNT" -le 2 ] && [ "$OVERLAP" -eq "$CURRENT_FILE_COUNT" ])); then
+              echo "true" > /tmp/is_resub
+              echo "$PREV_NUM" > /tmp/prev_pr
+              break
+            fi
+          done
+
+          if [ -f /tmp/is_resub ]; then
+            IS_RESUB="true"
+            PREV_PR=$(cat /tmp/prev_pr)
+            rm -f /tmp/is_resub /tmp/prev_pr
+          fi
+
+          echo "is_resubmission=$IS_RESUB" >> $GITHUB_OUTPUT
+
+          if [ "$IS_RESUB" = "true" ]; then
+            gh pr comment "$NUMBER" --body "This pull request appears to be a resubmission of a recently closed PR (#$PREV_PR) that did not meet the contribution requirements.
+
+          Rather than resubmitting, please ensure your contribution:
+          1. References an issue with the \`${{ inputs.help_wanted_label || 'help wanted' }}\` label
+          2. Includes a detailed description
+
+          If you believe this is a different contribution, please comment with details and we'll be happy to reopen."
+            gh pr edit "$NUMBER" --add-label "$UNMET_LABEL" --remove-label "${{ inputs.triage_label || 'needs-triage' }}" || true
+            gh pr close "$NUMBER"
+          fi
+
       - name: Check PR requirements
         id: check
+        if: steps.spam.outputs.is_spam != 'true' && steps.resubmission.outputs.is_resubmission != 'true'
         env:
           PRBODY: ${{ github.event.pull_request.body }}
           MIN_LENGTH: ${{ inputs.min_body_length || 10 }}
@@ -117,8 +304,58 @@ jobs:
             echo "$EOF" >> $GITHUB_OUTPUT
           fi
 
+      - name: Check if PR qualifies for small-fix fast-track
+        id: fast_track
+        if: |
+          inputs.enable_smart_triage &&
+          steps.check.outputs.requirements_met == 'false' &&
+          (github.event.action == 'opened' || github.event.action == 'reopened')
+        env:
+          PRBODY: ${{ github.event.pull_request.body }}
+          MAX_LOC: ${{ inputs.smart_triage_max_loc || 30 }}
+          MAX_FILES: ${{ inputs.smart_triage_max_files || 3 }}
+          MIN_BODY: ${{ inputs.smart_triage_min_body || 100 }}
+        run: |
+          QUALIFIES="false"
+
+          # Get PR stats
+          PR_STATS=$(gh pr view "$NUMBER" --json additions,deletions,changedFiles 2>/dev/null || echo "")
+          if [ -z "$PR_STATS" ]; then
+            echo "qualifies=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          ADDITIONS=$(echo "$PR_STATS" | jq -r '.additions')
+          DELETIONS=$(echo "$PR_STATS" | jq -r '.deletions')
+          CHANGED_FILES=$(echo "$PR_STATS" | jq -r '.changedFiles')
+          TOTAL_LOC=$((ADDITIONS + DELETIONS))
+
+          # Normalize body (strip template comments including multiline, collapse whitespace)
+          NORMALIZED_BODY=$(echo "$PRBODY" | perl -0pe 's/<!--.*?-->//gs' | sed '/^[[:space:]]*$/d' | tr -s '[:space:]' ' ' | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
+          NORM_LENGTH=$(echo -n "$NORMALIZED_BODY" | wc -c | tr -d ' ')
+
+          if [ "$TOTAL_LOC" -le "$MAX_LOC" ] && [ "$CHANGED_FILES" -le "$MAX_FILES" ] && [ "$NORM_LENGTH" -ge "$MIN_BODY" ]; then
+            QUALIFIES="true"
+          fi
+
+          echo "qualifies=$QUALIFIES" >> $GITHUB_OUTPUT
+
+      - name: Fast-track small fix to triage
+        if: steps.fast_track.outputs.qualifies == 'true'
+        env:
+          TRIAGE_LABEL: ${{ inputs.triage_label || 'needs-triage' }}
+        run: |
+          gh pr edit "$NUMBER" --add-label "$TRIAGE_LABEL"
+
+          gh pr comment "$NUMBER" --body "Thanks for your pull request! While it doesn't meet all of our standard requirements, it appears to be a small, focused contribution and has been routed to the team for review.
+
+          **Note:** We still encourage linking to an issue with the \`${{ inputs.help_wanted_label || 'help wanted' }}\` label when possible, as it helps us prioritize and track contributions."
+
       - name: Add unmet-requirements label and comment
-        if: steps.check.outputs.requirements_met == 'false' && (github.event.action == 'opened' || github.event.action == 'reopened')
+        if: |
+          steps.check.outputs.requirements_met == 'false' &&
+          steps.fast_track.outputs.qualifies != 'true' &&
+          (github.event.action == 'opened' || github.event.action == 'reopened')
         env:
           UNMET_LABEL: ${{ inputs.unmet_label || 'unmet-requirements' }}
           TRIAGE_LABEL: ${{ inputs.triage_label || 'needs-triage' }}
