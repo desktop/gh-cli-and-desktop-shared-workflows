@@ -69,11 +69,6 @@ on:
         type: number
         required: false
         default: 100
-      smart_triage_spam_paths:
-        description: 'Comma-separated path prefixes considered irrelevant (e.g., ".circleci/,.devcontainer/")'
-        type: string
-        required: false
-        default: ''
       smart_triage_large_pr_loc:
         description: 'Minimum lines changed to consider a PR "large" for accelerated close'
         type: number
@@ -113,14 +108,11 @@ jobs:
       - name: Detect and close spam PRs
         id: spam
         if: inputs.enable_smart_triage && (github.event.action == 'opened' || github.event.action == 'reopened')
-        env:
-          SPAM_PATHS: ${{ inputs.smart_triage_spam_paths }}
         run: |
           IS_SPAM="false"
-          SPAM_REASON=""
 
           # Get PR file stats
-          PR_DATA=$(gh pr view "$NUMBER" --json additions,deletions,changedFiles,files --jq '{additions,deletions,changedFiles,files:[.files[].path]}' 2>/dev/null || echo "")
+          PR_DATA=$(gh pr view "$NUMBER" --json additions,deletions,changedFiles 2>/dev/null || echo "")
 
           if [ -z "$PR_DATA" ]; then
             echo "is_spam=false" >> $GITHUB_OUTPUT
@@ -131,56 +123,15 @@ jobs:
           ADDITIONS=$(echo "$PR_DATA" | jq -r '.additions')
           DELETIONS=$(echo "$PR_DATA" | jq -r '.deletions')
 
-          # Check 1: Zero changed files
+          # Zero changed files — guaranteed not a real contribution
           if [ "$CHANGED_FILES" -eq 0 ] && [ "$ADDITIONS" -eq 0 ] && [ "$DELETIONS" -eq 0 ]; then
             IS_SPAM="true"
-            SPAM_REASON="This pull request contains no file changes."
-          fi
-
-          # Note: Short PR bodies are NOT treated as spam — contributors may update the
-          # body after opening. The standard requirements check handles this with a grace period.
-
-          # Check 2: All changed files in irrelevant paths
-          if [ "$IS_SPAM" = "false" ] && [ -n "$SPAM_PATHS" ]; then
-            FILE_PATHS=$(echo "$PR_DATA" | jq -r '.files[]')
-            ALL_IRRELEVANT="true"
-
-            if [ -n "$FILE_PATHS" ]; then
-              echo "$FILE_PATHS" | while IFS= read -r filepath; do
-                MATCH="false"
-                IFS=',' read -ra PREFIXES <<< "$SPAM_PATHS"
-                for prefix in "${PREFIXES[@]}"; do
-                  prefix=$(echo "$prefix" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
-                  [ -z "$prefix" ] && continue
-                  if [[ "$filepath" == "$prefix"* ]]; then
-                    MATCH="true"
-                    break
-                  fi
-                done
-                if [ "$MATCH" = "false" ]; then
-                  echo "false" > /tmp/all_irrelevant
-                  break
-                fi
-              done
-
-              if [ -f /tmp/all_irrelevant ]; then
-                ALL_IRRELEVANT="false"
-                rm -f /tmp/all_irrelevant
-              fi
-            else
-              ALL_IRRELEVANT="false"
-            fi
-
-            if [ "$ALL_IRRELEVANT" = "true" ] && [ "$CHANGED_FILES" -gt 0 ]; then
-              IS_SPAM="true"
-              SPAM_REASON="This pull request only modifies files outside the scope of this project."
-            fi
           fi
 
           echo "is_spam=$IS_SPAM" >> $GITHUB_OUTPUT
 
           if [ "$IS_SPAM" = "true" ]; then
-            gh pr comment "$NUMBER" --body "$SPAM_REASON This does not appear to be a meaningful contribution and has been closed automatically.
+            gh pr comment "$NUMBER" --body "This pull request contains no file changes and has been closed automatically.
 
           If this was closed by mistake, please comment with additional context and we'll be happy to reopen."
             gh pr close "$NUMBER"
