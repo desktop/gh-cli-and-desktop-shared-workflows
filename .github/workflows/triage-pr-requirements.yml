@@ -99,7 +99,6 @@ jobs:
         id: spam
         if: inputs.enable_smart_triage && (github.event.action == 'opened' || github.event.action == 'reopened')
         env:
-          PRBODY: ${{ github.event.pull_request.body }}
           SPAM_PATHS: ${{ inputs.smart_triage_spam_paths }}
         run: |
           IS_SPAM="false"
@@ -123,17 +122,10 @@ jobs:
             SPAM_REASON="This pull request contains no file changes."
           fi
 
-          # Check 2: Normalize body and check length (use perl for multiline comment stripping)
-          if [ "$IS_SPAM" = "false" ]; then
-            NORMALIZED_BODY=$(echo "$PRBODY" | perl -0pe 's/<!--.*?-->//gs' | sed '/^[[:space:]]*$/d' | tr -s '[:space:]' ' ' | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
-            NORM_LENGTH=$(echo -n "$NORMALIZED_BODY" | wc -c | tr -d ' ')
-            if [ "$NORM_LENGTH" -lt 50 ]; then
-              IS_SPAM="true"
-              SPAM_REASON="This pull request has no meaningful description."
-            fi
-          fi
+          # Note: Short PR bodies are NOT treated as spam — contributors may update the
+          # body after opening. The standard requirements check handles this with a grace period.
 
-          # Check 3: All changed files in irrelevant paths
+          # Check 2: All changed files in irrelevant paths
           if [ "$IS_SPAM" = "false" ] && [ -n "$SPAM_PATHS" ]; then
             FILE_PATHS=$(echo "$PR_DATA" | jq -r '.files[]')
             ALL_IRRELEVANT="true"
