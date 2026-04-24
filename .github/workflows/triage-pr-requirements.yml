@@ -7,10 +7,11 @@ name: 'Triage: Check PR requirements'
 # If requirements are not met, adds 'unmet-requirements' label and comments.
 # Also re-checks on PR edits and removes the label if requirements are now met.
 #
-# Smart triage (opt-in via enable_smart_triage):
-# - Instantly closes spam PRs (zero files, empty body, irrelevant paths)
+# Extended PR screening (opt-in via enable_pr_screening):
+# - Instantly closes PRs with zero file changes
 # - Detects same-author resubmissions of recently closed PRs
 # - Fast-tracks small, focused contributions to triage instead of auto-closing
+# - Accelerates closure of large unsolicited PRs with no prior discussion
 
 on:
   workflow_call:
@@ -49,37 +50,37 @@ on:
         type: number
         required: false
         default: 7
-      enable_smart_triage:
-        description: 'Enable smart triage features (spam detection, resubmission detection, small-fix fast-track)'
+      enable_pr_screening:
+        description: 'Enable extended PR screening (zero-change close, resubmission detection, small-fix fast-track, large PR accelerated close)'
         type: boolean
         required: false
         default: false
-      smart_triage_max_loc:
+      fast_track_max_loc:
         description: 'Maximum lines changed (additions + deletions) for small-fix fast-track'
         type: number
         required: false
         default: 30
-      smart_triage_max_files:
+      fast_track_max_files:
         description: 'Maximum files changed for small-fix fast-track'
         type: number
         required: false
         default: 3
-      smart_triage_min_body:
+      fast_track_min_body:
         description: 'Minimum PR body length (after normalization) for small-fix fast-track'
         type: number
         required: false
         default: 100
-      smart_triage_large_pr_loc:
+      large_pr_min_loc:
         description: 'Minimum lines changed to consider a PR "large" for accelerated close'
         type: number
         required: false
         default: 200
-      smart_triage_large_pr_files:
+      large_pr_min_files:
         description: 'Minimum files changed to consider a PR "large" for accelerated close'
         type: number
         required: false
         default: 5
-      smart_triage_large_pr_days:
+      large_pr_days_until_close:
         description: 'Days before closing large unsolicited PRs (shorter than standard days_until_close)'
         type: number
         required: false
@@ -107,7 +108,7 @@ jobs:
     steps:
       - name: Detect and close spam PRs
         id: spam
-        if: inputs.enable_smart_triage && (github.event.action == 'opened' || github.event.action == 'reopened')
+        if: inputs.enable_pr_screening && (github.event.action == 'opened' || github.event.action == 'reopened')
         run: |
           IS_SPAM="false"
 
@@ -139,7 +140,7 @@ jobs:
 
       - name: Detect same-author resubmissions
         id: resubmission
-        if: inputs.enable_smart_triage && steps.spam.outputs.is_spam != 'true' && (github.event.action == 'opened' || github.event.action == 'reopened')
+        if: inputs.enable_pr_screening && steps.spam.outputs.is_spam != 'true' && (github.event.action == 'opened' || github.event.action == 'reopened')
         env:
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
           UNMET_LABEL: ${{ inputs.unmet_label || 'unmet-requirements' }}
@@ -265,14 +266,14 @@ jobs:
       - name: Check if PR qualifies for small-fix fast-track
         id: fast_track
         if: |
-          inputs.enable_smart_triage &&
+          inputs.enable_pr_screening &&
           steps.check.outputs.requirements_met == 'false' &&
           (github.event.action == 'opened' || github.event.action == 'reopened')
         env:
           PRBODY: ${{ github.event.pull_request.body }}
-          MAX_LOC: ${{ inputs.smart_triage_max_loc || 30 }}
-          MAX_FILES: ${{ inputs.smart_triage_max_files || 3 }}
-          MIN_BODY: ${{ inputs.smart_triage_min_body || 100 }}
+          MAX_LOC: ${{ inputs.fast_track_max_loc || 30 }}
+          MAX_FILES: ${{ inputs.fast_track_max_files || 3 }}
+          MIN_BODY: ${{ inputs.fast_track_min_body || 100 }}
         run: |
           QUALIFIES="false"
 
@@ -312,14 +313,14 @@ jobs:
       - name: Detect large unsolicited PRs
         id: large_pr
         if: |
-          inputs.enable_smart_triage &&
+          inputs.enable_pr_screening &&
           steps.check.outputs.requirements_met == 'false' &&
           steps.fast_track.outputs.qualifies != 'true' &&
           (github.event.action == 'opened' || github.event.action == 'reopened')
         env:
-          LARGE_LOC: ${{ inputs.smart_triage_large_pr_loc || 200 }}
-          LARGE_FILES: ${{ inputs.smart_triage_large_pr_files || 5 }}
-          LARGE_DAYS: ${{ inputs.smart_triage_large_pr_days || 3 }}
+          LARGE_LOC: ${{ inputs.large_pr_min_loc || 200 }}
+          LARGE_FILES: ${{ inputs.large_pr_min_files || 5 }}
+          LARGE_DAYS: ${{ inputs.large_pr_days_until_close || 3 }}
           UNMET_LABEL: ${{ inputs.unmet_label || 'unmet-requirements' }}
           TRIAGE_LABEL: ${{ inputs.triage_label || 'needs-triage' }}
         run: |
