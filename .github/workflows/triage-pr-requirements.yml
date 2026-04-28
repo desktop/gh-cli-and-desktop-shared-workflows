@@ -85,6 +85,11 @@ on:
         type: number
         required: false
         default: 3
+      fast_track_label:
+        description: 'Label to apply when a small fix is fast-tracked for review'
+        type: string
+        required: false
+        default: 'ready-for-review'
 
 permissions:
   issues: read
@@ -184,16 +189,16 @@ jobs:
 
             # Require ≥2 overlapping files, or full overlap for small PRs (1-2 files)
             if ([ "$OVERLAP" -ge 2 ] || ([ "$CURRENT_FILE_COUNT" -le 2 ] && [ "$OVERLAP" -eq "$CURRENT_FILE_COUNT" ])); then
-              echo "true" > /tmp/is_resub
-              echo "$PREV_NUM" > /tmp/prev_pr
+              echo "true" > "${RUNNER_TEMP}/is_resub"
+              echo "$PREV_NUM" > "${RUNNER_TEMP}/prev_pr"
               break
             fi
           done
 
-          if [ -f /tmp/is_resub ]; then
+          if [ -f "${RUNNER_TEMP}/is_resub" ]; then
             IS_RESUB="true"
-            PREV_PR=$(cat /tmp/prev_pr)
-            rm -f /tmp/is_resub /tmp/prev_pr
+            PREV_PR=$(cat "${RUNNER_TEMP}/prev_pr")
+            rm -f "${RUNNER_TEMP}/is_resub" "${RUNNER_TEMP}/prev_pr"
           fi
 
           echo "is_resubmission=$IS_RESUB" >> $GITHUB_OUTPUT
@@ -302,7 +307,7 @@ jobs:
       - name: Fast-track small fix to review
         if: steps.fast_track.outputs.qualifies == 'true'
         run: |
-          gh pr edit "$NUMBER" --add-label "ready-for-review" --remove-label "${{ inputs.triage_label || 'needs-triage' }}"
+          gh pr edit "$NUMBER" --add-label "${{ inputs.fast_track_label || 'ready-for-review' }}" --remove-label "${{ inputs.triage_label || 'needs-triage' }}" || true
 
           gh pr comment "$NUMBER" --body "Thanks for your pull request! While it doesn't meet all of our standard requirements, it appears to be a small, focused contribution and has been routed to the team for review.
 
@@ -324,7 +329,7 @@ jobs:
         run: |
           IS_LARGE="false"
 
-          PR_STATS=$(gh pr view "$NUMBER" --json additions,deletions,changedFiles,reviews --jq '{additions,deletions,changedFiles,reviews:[.reviews[].author.login]}' 2>/dev/null || echo "")
+          PR_STATS=$(gh pr view "$NUMBER" --json additions,deletions,changedFiles,reviews --jq '{additions,deletions,changedFiles,reviews:[.reviews[] | select(.authorAssociation == "MEMBER" or .authorAssociation == "OWNER" or .authorAssociation == "COLLABORATOR") | .author.login]}' 2>/dev/null || echo "")
           if [ -z "$PR_STATS" ]; then
             echo "is_large=false" >> $GITHUB_OUTPUT
             exit 0
@@ -334,10 +339,10 @@ jobs:
           DELETIONS=$(echo "$PR_STATS" | jq -r '.deletions')
           CHANGED_FILES=$(echo "$PR_STATS" | jq -r '.changedFiles')
           TOTAL_LOC=$((ADDITIONS + DELETIONS))
-          HAS_REVIEWS=$(echo "$PR_STATS" | jq '.reviews | length > 0')
+          HAS_TEAM_REVIEWS=$(echo "$PR_STATS" | jq '.reviews | length > 0')
 
           # Large PR: > threshold LOC, > threshold files, no team reviews
-          if [ "$TOTAL_LOC" -gt "$LARGE_LOC" ] && [ "$CHANGED_FILES" -gt "$LARGE_FILES" ] && [ "$HAS_REVIEWS" = "false" ]; then
+          if [ "$TOTAL_LOC" -gt "$LARGE_LOC" ] && [ "$CHANGED_FILES" -gt "$LARGE_FILES" ] && [ "$HAS_TEAM_REVIEWS" = "false" ]; then
             IS_LARGE="true"
           fi
 
@@ -407,13 +412,18 @@ jobs:
         env:
           UNMET_LABEL: ${{ inputs.unmet_label || 'unmet-requirements' }}
           DAYS: ${{ inputs.days_until_close || 7 }}
+          LARGE_DAYS: ${{ inputs.large_pr_days_until_close || 3 }}
+          LARGE_LOC: ${{ inputs.large_pr_min_loc || 200 }}
+          LARGE_FILES: ${{ inputs.large_pr_min_files || 5 }}
+          ENABLE_SCREENING: ${{ inputs.enable_pr_screening }}
           HELP_WANTED_LABEL: ${{ inputs.help_wanted_label || 'help wanted' }}
           MIN_LENGTH: ${{ inputs.min_body_length || 10 }}
           TRIAGE_LABEL: ${{ inputs.triage_label || 'needs-triage' }}
         run: |
-          CUTOFF_DATE=$(date -u -d "$DAYS days ago" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-${DAYS}d +%Y-%m-%dT%H:%M:%SZ)
+          STANDARD_CUTOFF=$(date -u -d "$DAYS days ago" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-${DAYS}d +%Y-%m-%dT%H:%M:%SZ)
+          LARGE_CUTOFF=$(date -u -d "$LARGE_DAYS days ago" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-${LARGE_DAYS}d +%Y-%m-%dT%H:%M:%SZ)
 
-          gh pr list --label "$UNMET_LABEL" --state open --json number,createdAt,body,labels --jq '.[]' | while read -r PR_JSON; do
+          gh pr list --label "$UNMET_LABEL" --state open --json number,createdAt,body,labels,additions,deletions,changedFiles --jq '.[]' | while read -r PR_JSON; do
             PR_NUM=$(echo "$PR_JSON" | jq -r '.number')
             PRBODY=$(echo "$PR_JSON" | jq -r '.body // ""')
 
@@ -422,6 +432,18 @@ jobs:
 
             if [ -z "$LABEL_ADDED" ] || [ "$LABEL_ADDED" = "null" ]; then
               continue
+            fi
+
+            # Determine deadline: large PRs get the accelerated cutoff
+            CUTOFF_DATE="$STANDARD_CUTOFF"
+            if [ "$ENABLE_SCREENING" = "true" ]; then
+              PR_ADDITIONS=$(echo "$PR_JSON" | jq -r '.additions // 0')
+              PR_DELETIONS=$(echo "$PR_JSON" | jq -r '.deletions // 0')
+              PR_CHANGED=$(echo "$PR_JSON" | jq -r '.changedFiles // 0')
+              PR_TOTAL_LOC=$((PR_ADDITIONS + PR_DELETIONS))
+              if [ "$PR_TOTAL_LOC" -gt "$LARGE_LOC" ] && [ "$PR_CHANGED" -gt "$LARGE_FILES" ]; then
+                CUTOFF_DATE="$LARGE_CUTOFF"
+              fi
             fi
 
             if [[ "$LABEL_ADDED" < "$CUTOFF_DATE" ]]; then
