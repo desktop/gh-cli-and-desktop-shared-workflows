@@ -18,7 +18,7 @@ Shared GitHub Actions workflows for issue and PR triaging, used by the GH CLI an
 | [`triage-stale-issues.yml`](.github/workflows/triage-stale-issues.yml) | Marks stale issues after inactivity | `schedule` |
 | [`triage-label-external-pr.yml`](.github/workflows/triage-label-external-pr.yml) | Labels PRs from external contributors | `pull_request_target: [opened, reopened]` |
 | [`triage-close-from-default-branch.yml`](.github/workflows/triage-close-from-default-branch.yml) | Closes accidental PRs from default branch | `pull_request_target: [opened]` |
-| [`triage-pr-requirements.yml`](.github/workflows/triage-pr-requirements.yml) | Checks external PRs for body + `help-wanted` issue | `pull_request_target: [opened, reopened, edited]` + `schedule` |
+| [`triage-pr-requirements.yml`](.github/workflows/triage-pr-requirements.yml) | Checks external PRs for body + `help-wanted` issue; opt-in screening for zero-change, resubmission, small-fix fast-track, and large PR handling | `pull_request_target: [opened, reopened, edited]` + `schedule` |
 | [`triage-close-no-help-wanted.yml`](.github/workflows/triage-close-no-help-wanted.yml) | Closes PRs without a `help-wanted` issue | `pull_request_target: [labeled]` |
 | [`triage-ready-for-review.yml`](.github/workflows/triage-ready-for-review.yml) | Removes `needs-triage` label when PR is ready for review | `pull_request_target: [labeled]` |
 | [`triage-contributor-input-needed.yml`](.github/workflows/triage-contributor-input-needed.yml) | Auto-labels PRs with changes requested, warns after inactivity, auto-closes | `pull_request_target: [synchronize]` + `issue_comment` + `schedule` |
@@ -42,7 +42,7 @@ Repositories using these workflows need the following labels:
 | `external` | label-external-pr, pr-requirements | Applied to PRs from non-org contributors |
 | `help-wanted` | pr-requirements | Must be on issues linked by external PRs |
 | `no-help-wanted-issue` | close-no-help-wanted | Auto-closes PRs without help-wanted issue |
-| `ready-for-review` | ready-for-review, remove-needs-triage | Marks triaged PRs ready for review |
+| `ready-for-review` | ready-for-review, remove-needs-triage, pr-requirements | Marks triaged PRs ready for review |
 | `contributor-input-needed` | contributor-input-needed | Applied when changes are requested; auto-warns and closes after inactivity |
 | `unmet-requirements` | pr-requirements | PRs that don't meet minimum requirements |
 | `stale` | stale-issues | Applied to inactive issues |
@@ -76,6 +76,7 @@ Key inputs that differ between repositories:
 |-------|-------------|----------------|
 | `help_wanted_url` | URL to help-wanted label | `https://github.com/your-org/your-repo/labels/help%20wanted` |
 | `repository_org` | Org name for external PR detection | `cli`, `desktop` |
+| `enable_pr_screening` | Enable extended PR screening (zero-change close, resubmission detection, small-fix fast-track, large PR accelerated close) | `true`, `false` |
 | `additional_context` | App-specific info for reproduce comment | Log file paths, debug steps |
 | `default_branch` | Default branch name | `main`, `trunk`, `development` |
 | `target_repo` | Internal repo for discuss workflow | `your-org/internal-repo` |
