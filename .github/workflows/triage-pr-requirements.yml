@@ -299,12 +299,10 @@ jobs:
 
           echo "qualifies=$QUALIFIES" >> $GITHUB_OUTPUT
 
-      - name: Fast-track small fix to triage
+      - name: Fast-track small fix to review
         if: steps.fast_track.outputs.qualifies == 'true'
-        env:
-          TRIAGE_LABEL: ${{ inputs.triage_label || 'needs-triage' }}
         run: |
-          gh pr edit "$NUMBER" --add-label "$TRIAGE_LABEL"
+          gh pr edit "$NUMBER" --add-label "ready-for-review" --remove-label "${{ inputs.triage_label || 'needs-triage' }}"
 
           gh pr comment "$NUMBER" --body "Thanks for your pull request! While it doesn't meet all of our standard requirements, it appears to be a small, focused contribution and has been routed to the team for review.
 
