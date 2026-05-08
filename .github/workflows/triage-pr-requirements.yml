@@ -1,6 +1,6 @@
 name: 'Triage: Check PR requirements'
 
-# Expected triggers: pull_request_target: [opened, reopened, edited], schedule
+# Expected triggers: pull_request_target: [opened, reopened, edited, ready_for_review], schedule
 # Checks external PRs for minimum requirements:
 # 1. PR body must be at least 10 characters
 # 2. PR must reference an issue with the 'help wanted' label
@@ -98,12 +98,12 @@ permissions:
 jobs:
   check-requirements:
     runs-on: ubuntu-latest
-    # Run on external PRs when opened/reopened, or when a PR with 'unmet-requirements' is edited
+    # Run on external PRs when opened/reopened or marked ready for review, or when a PR with 'unmet-requirements' is edited
     # Skip draft PRs
     if: |
       !github.event.pull_request.draft &&
       (
-        (github.event_name == 'pull_request_target' && (github.event.action == 'opened' || github.event.action == 'reopened') && startsWith(github.event.pull_request.head.label, format('{0}:', inputs.repository_org || github.repository_owner)) == false) ||
+        (github.event_name == 'pull_request_target' && (github.event.action == 'opened' || github.event.action == 'reopened' || github.event.action == 'ready_for_review') && startsWith(github.event.pull_request.head.label, format('{0}:', inputs.repository_org || github.repository_owner)) == false) ||
         (github.event_name == 'pull_request_target' && github.event.action == 'edited' && contains(github.event.pull_request.labels.*.name, 'unmet-requirements'))
       )
     env:
@@ -113,7 +113,7 @@ jobs:
     steps:
       - name: Detect and close spam PRs
         id: spam
-        if: inputs.enable_pr_screening && (github.event.action == 'opened' || github.event.action == 'reopened')
+        if: inputs.enable_pr_screening && (github.event.action == 'opened' || github.event.action == 'reopened' || github.event.action == 'ready_for_review')
         run: |
           IS_SPAM="false"
 
@@ -145,7 +145,7 @@ jobs:
 
       - name: Detect same-author resubmissions
         id: resubmission
-        if: inputs.enable_pr_screening && steps.spam.outputs.is_spam != 'true' && (github.event.action == 'opened' || github.event.action == 'reopened')
+        if: inputs.enable_pr_screening && steps.spam.outputs.is_spam != 'true' && (github.event.action == 'opened' || github.event.action == 'reopened' || github.event.action == 'ready_for_review')
         env:
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
           UNMET_LABEL: ${{ inputs.unmet_label || 'unmet-requirements' }}
@@ -273,7 +273,7 @@ jobs:
         if: |
           inputs.enable_pr_screening &&
           steps.check.outputs.requirements_met == 'false' &&
-          (github.event.action == 'opened' || github.event.action == 'reopened')
+          (github.event.action == 'opened' || github.event.action == 'reopened' || github.event.action == 'ready_for_review')
         env:
           PRBODY: ${{ github.event.pull_request.body }}
           MAX_LOC: ${{ inputs.fast_track_max_loc || 30 }}
@@ -319,7 +319,7 @@ jobs:
           inputs.enable_pr_screening &&
           steps.check.outputs.requirements_met == 'false' &&
           steps.fast_track.outputs.qualifies != 'true' &&
-          (github.event.action == 'opened' || github.event.action == 'reopened')
+          (github.event.action == 'opened' || github.event.action == 'reopened' || github.event.action == 'ready_for_review')
         env:
           LARGE_LOC: ${{ inputs.large_pr_min_loc || 200 }}
           LARGE_FILES: ${{ inputs.large_pr_min_files || 5 }}
@@ -370,7 +370,7 @@ jobs:
           steps.check.outputs.requirements_met == 'false' &&
           steps.fast_track.outputs.qualifies != 'true' &&
           steps.large_pr.outputs.is_large != 'true' &&
-          (github.event.action == 'opened' || github.event.action == 'reopened')
+          (github.event.action == 'opened' || github.event.action == 'reopened' || github.event.action == 'ready_for_review')
         env:
           UNMET_LABEL: ${{ inputs.unmet_label || 'unmet-requirements' }}
           TRIAGE_LABEL: ${{ inputs.triage_label || 'needs-triage' }}
