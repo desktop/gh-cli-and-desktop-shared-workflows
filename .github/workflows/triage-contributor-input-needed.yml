@@ -98,15 +98,21 @@ jobs:
         env:
           LABEL: ${{ inputs.input_needed_label || 'contributor-input-needed' }}
           READY_LABEL: ${{ inputs.ready_for_review_label || 'ready-for-review' }}
+          EVENT_NAME: ${{ github.event_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_ACTOR: ${{ github.event.sender.login }}
+          COMMENT_ACTOR: ${{ github.event.comment.user.login }}
         run: |
-          if [ "${{ github.event_name }}" = "pull_request_target" ]; then
-            NUMBER="${{ github.event.pull_request.number }}"
-            AUTHOR="${{ github.event.pull_request.user.login }}"
-            ACTOR="${{ github.event.sender.login }}"
+          if [ "$EVENT_NAME" = "pull_request_target" ]; then
+            NUMBER="$PR_NUMBER"
+            AUTHOR="$PR_AUTHOR"
+            ACTOR="$PR_ACTOR"
           else
-            NUMBER="${{ github.event.issue.number }}"
+            NUMBER="$ISSUE_NUMBER"
             AUTHOR=$(gh pr view "$NUMBER" --json author --jq '.author.login')
-            ACTOR="${{ github.event.comment.user.login }}"
+            ACTOR="$COMMENT_ACTOR"
           fi
 
           # Only remove label if the PR author is the one who responded

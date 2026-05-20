@@ -28,9 +28,10 @@ jobs:
     steps:
       - name: Check if unable-to-reproduce label was added
         id: check
+        env:
+          UNABLE_LABEL: ${{ inputs.unable_to_reproduce_label || 'unable-to-reproduce' }}
+          ADDED_LABEL: ${{ github.event.label.name }}
         run: |
-          UNABLE_LABEL="${{ inputs.unable_to_reproduce_label || 'unable-to-reproduce' }}"
-          ADDED_LABEL="${{ github.event.label.name }}"
           if [ "$ADDED_LABEL" = "$UNABLE_LABEL" ]; then
             echo "should_comment=true" >> $GITHUB_OUTPUT
           else

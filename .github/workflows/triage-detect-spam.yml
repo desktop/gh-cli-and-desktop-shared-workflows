@@ -42,12 +42,14 @@ jobs:
           repository: desktop/gh-cli-and-desktop-shared-workflows
           path: shared-workflows
           sparse-checkout: .github/workflows/scripts/spam-detection
+          persist-credentials: false
 
       - name: Checkout calling repository (for issue templates)
         uses: actions/checkout@v6
         with:
           path: calling-repo
           sparse-checkout: .github/ISSUE_TEMPLATE
+          persist-credentials: false
 
       - name: Run spam detection
         env:

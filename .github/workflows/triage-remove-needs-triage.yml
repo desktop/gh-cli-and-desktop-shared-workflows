@@ -23,11 +23,11 @@ jobs:
     steps:
       - name: Check if label is an end-state label
         id: check-label
+        env:
+          END_STATE_LABELS: ${{ inputs.end_state_labels || 'enhancement,ready-for-review,priority-1,priority-2,priority-3' }}
+          CURRENT_LABEL: ${{ github.event.label.name }}
         run: |
-          END_STATE="${{ inputs.end_state_labels || 'enhancement,ready-for-review,priority-1,priority-2,priority-3' }}"
-          CURRENT_LABEL="${{ github.event.label.name }}"
-          
-          if echo "$END_STATE" | tr ',' '\n' | grep -qx "$CURRENT_LABEL"; then
+          if echo "$END_STATE_LABELS" | tr ',' '\n' | grep -qx "$CURRENT_LABEL"; then
             echo "should_remove=true" >> $GITHUB_OUTPUT
           else
             echo "should_remove=false" >> $GITHUB_OUTPUT
