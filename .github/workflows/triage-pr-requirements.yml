@@ -149,6 +149,8 @@ jobs:
         env:
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
           UNMET_LABEL: ${{ inputs.unmet_label || 'unmet-requirements' }}
+          HELP_WANTED_LABEL: ${{ inputs.help_wanted_label || 'help wanted' }}
+          TRIAGE_LABEL: ${{ inputs.triage_label || 'needs-triage' }}
         run: |
           IS_RESUB="false"
           PREV_PR=""
@@ -207,11 +209,11 @@ jobs:
             gh pr comment "$NUMBER" --body "This pull request appears to be a resubmission of a recently closed PR (#$PREV_PR) that did not meet the contribution requirements.
 
           Rather than resubmitting, please ensure your contribution:
-          1. References an issue with the \`${{ inputs.help_wanted_label || 'help wanted' }}\` label
+          1. References an issue with the \`$HELP_WANTED_LABEL\` label
           2. Includes a detailed description
 
           If you believe this is a different contribution, please comment with details and we'll be happy to reopen."
-            gh pr edit "$NUMBER" --add-label "$UNMET_LABEL" --remove-label "${{ inputs.triage_label || 'needs-triage' }}" || true
+            gh pr edit "$NUMBER" --add-label "$UNMET_LABEL" --remove-label "$TRIAGE_LABEL" || true
             gh pr close "$NUMBER"
           fi
 
@@ -306,12 +308,16 @@ jobs:
 
       - name: Fast-track small fix to review
         if: steps.fast_track.outputs.qualifies == 'true'
+        env:
+          FAST_TRACK_LABEL: ${{ inputs.fast_track_label || 'ready-for-review' }}
+          TRIAGE_LABEL: ${{ inputs.triage_label || 'needs-triage' }}
+          HELP_WANTED_LABEL: ${{ inputs.help_wanted_label || 'help wanted' }}
         run: |
-          gh pr edit "$NUMBER" --add-label "${{ inputs.fast_track_label || 'ready-for-review' }}" --remove-label "${{ inputs.triage_label || 'needs-triage' }}" || true
+          gh pr edit "$NUMBER" --add-label "$FAST_TRACK_LABEL" --remove-label "$TRIAGE_LABEL" || true
 
           gh pr comment "$NUMBER" --body "Thanks for your pull request! While it doesn't meet all of our standard requirements, it appears to be a small, focused contribution and has been routed to the team for review.
 
-          **Note:** We still encourage linking to an issue with the \`${{ inputs.help_wanted_label || 'help wanted' }}\` label when possible, as it helps us prioritize and track contributions."
+          **Note:** We still encourage linking to an issue with the \`$HELP_WANTED_LABEL\` label when possible, as it helps us prioritize and track contributions."
 
       - name: Detect large unsolicited PRs
         id: large_pr
@@ -326,6 +332,7 @@ jobs:
           LARGE_DAYS: ${{ inputs.large_pr_days_until_close || 3 }}
           UNMET_LABEL: ${{ inputs.unmet_label || 'unmet-requirements' }}
           TRIAGE_LABEL: ${{ inputs.triage_label || 'needs-triage' }}
+          HELP_WANTED_LABEL: ${{ inputs.help_wanted_label || 'help wanted' }}
         run: |
           IS_LARGE="false"
 
@@ -351,7 +358,7 @@ jobs:
           if [ "$IS_LARGE" = "true" ]; then
             gh pr edit "$NUMBER" --add-label "$UNMET_LABEL" --remove-label "$TRIAGE_LABEL"
 
-            gh pr comment "$NUMBER" --body "Thanks for your pull request! This is a large change ($TOTAL_LOC lines across $CHANGED_FILES files) that doesn't reference a \`${{ inputs.help_wanted_label || 'help wanted' }}\` issue.
+            gh pr comment "$NUMBER" --body "Thanks for your pull request! This is a large change ($TOTAL_LOC lines across $CHANGED_FILES files) that doesn't reference a \`$HELP_WANTED_LABEL\` issue.
 
           Large feature PRs require prior discussion in an issue before implementation — this helps the team assess whether the feature aligns with the project's direction before significant effort is invested.
 
@@ -361,7 +368,7 @@ jobs:
           <summary>Full contribution requirements</summary>
 
           1. Include a detailed description of what this PR does
-          2. Link to an issue with the \`${{ inputs.help_wanted_label || 'help wanted' }}\` label (use \`Fixes #123\` or \`Closes #123\`)
+          2. Link to an issue with the \`$HELP_WANTED_LABEL\` label (use \`Fixes #123\` or \`Closes #123\`)
           </details>"
           fi
 
@@ -376,6 +383,7 @@ jobs:
           TRIAGE_LABEL: ${{ inputs.triage_label || 'needs-triage' }}
           DAYS: ${{ inputs.days_until_close || 7 }}
           REASONS: ${{ steps.check.outputs.reasons }}
+          HELP_WANTED_LABEL: ${{ inputs.help_wanted_label || 'help wanted' }}
         run: |
           gh pr edit "$NUMBER" --add-label "$UNMET_LABEL" --remove-label "$TRIAGE_LABEL"
 
@@ -389,7 +397,7 @@ jobs:
           <summary>Full contribution requirements</summary>
 
           1. Include a detailed description of what this PR does
-          2. Link to an issue with the \`${{ inputs.help_wanted_label || 'help wanted' }}\` label (use \`Fixes #123\` or \`Closes #123\`)
+          2. Link to an issue with the \`$HELP_WANTED_LABEL\` label (use \`Fixes #123\` or \`Closes #123\`)
           </details>"
 
       - name: Remove unmet-requirements label if now passing

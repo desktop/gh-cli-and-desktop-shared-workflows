@@ -1,5 +1,9 @@
 name: Auto-merge Dependabot PRs
-on:
+
+# pull_request_target is required so we can approve/merge with the elevated
+# GITHUB_TOKEN. We never check out PR code, and the if: filter on
+# github.event.pull_request.user.login is server-enforced and cannot be spoofed.
+on: # zizmor: ignore[dangerous-triggers]
   pull_request_target:
     types: [opened, reopened]
 
