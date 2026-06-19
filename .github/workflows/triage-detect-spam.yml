@@ -37,7 +37,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout shared workflows
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.3
         with:
           repository: desktop/gh-cli-and-desktop-shared-workflows
           path: shared-workflows
@@ -45,7 +45,7 @@ jobs:
           persist-credentials: false
 
       - name: Checkout calling repository (for issue templates)
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.3
         with:
           path: calling-repo
           sparse-checkout: .github/ISSUE_TEMPLATE
