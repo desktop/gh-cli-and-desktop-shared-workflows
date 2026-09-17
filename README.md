@@ -51,6 +51,63 @@ Repositories using these workflows need the following labels:
 | `priority-2` | remove-needs-triage | End-state label; removes needs-triage |
 | `priority-3` | remove-needs-triage | End-state label; removes needs-triage |
 
+## Agentic Workflows (gh-aw)
+
+Some workflows in this repo are [GitHub Agentic Workflows](https://githubnext.github.io/gh-aw/)
+rather than reusable `workflow_call` YAML. They are authored as markdown under
+[`workflows/`](workflows/), consume shared components from [`shared/`](shared/), and follow
+triage rubrics in [`skills/`](skills/). Consuming repos install them with `gh aw add` and
+`gh aw compile` locally.
+
+| Workflow | Description | Trigger |
+|----------|-------------|---------|
+| [`workflows/dependabot-triage.md`](workflows/dependabot-triage.md) | Assesses open Dependabot PRs and posts a **merge-confidence** comment (High/Medium/Low) with rationale and key facts, validating against the upstream source diff. **Advisory only — never merges, approves, or labels.** | `schedule` (every 6h) + `workflow_dispatch` |
+
+### Dependabot PR triage
+
+A scheduled **reconciler** that reviews every open pull request authored by `dependabot[bot]`
+and comments **exactly once per PR head commit**, re-commenting only when that commit changes.
+
+**Why a schedule and not a PR trigger?** The workflow intentionally has no `pull_request` or
+`pull_request_target` trigger, so it never runs in a pull-request-authored context. This makes
+it trivially safe from untrusted PR head code and gives it full access to repository secrets
+(Dependabot-triggered events get a read-only token and no Actions secrets). All content it reads
+— PR bodies, changelogs, upstream source — is treated as untrusted data.
+
+**How it decides to comment (per PR):**
+1. Read the PR head commit SHA (the change key).
+2. If CI checks are still **pending**, skip this run and comment later once they are terminal.
+3. If a prior comment's `<!-- dependabot-triage: head=<sha> -->` marker matches the current head
+   SHA, skip (already reviewed this exact state).
+4. Otherwise assess confidence and post one comment, collapsing the superseded one.
+
+**Install:**
+
+```bash
+gh aw add desktop/gh-cli-and-desktop-shared-workflows/dependabot-triage@main
+gh aw compile
+git add .github/workflows/ .github/aw/
+git commit -m "Add Dependabot PR triage"
+```
+
+Commit both the generated `.lock.yml` and `.github/aw/actions-lock.json`. Pin `@main` to a tag or
+commit SHA for reproducibility.
+
+**Required secrets** (reuses the shared triage GitHub App):
+
+| Secret | Purpose |
+|--------|---------|
+| `CLI_TRIAGE_APP_CLIENT_ID` | GitHub App client ID used to post the triage comment |
+| `CLI_TRIAGE_APP_PRIVATE_KEY` | GitHub App private key |
+
+The GitHub App must have **Pull requests: write** so it can comment. Writes go through gh-aw
+[safe outputs](https://githubnext.github.io/gh-aw/reference/safe-outputs/) as this App; the
+workflow's own `GITHUB_TOKEN` stays read-only. There is deliberately no merge/approve/label
+safe-output, so the triager can never auto-merge.
+
+> Linting: the compiled `.lock.yml` passes [`zizmor`](https://docs.zizmor.sh/) with no
+> low/medium/high findings.
+
 ## Usage
 
 To use these workflows, create thin workflow files in your repository's `.github/workflows/` directory that reference these shared workflows via `workflow_call`.
