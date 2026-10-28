@@ -3,7 +3,7 @@ name: prepare-team-pr
 description: >
   Prepare or update a team-authored pull request for GitHub CLI or GitHub
   Desktop, collecting validation evidence, assessing deep-review needs,
-  optionally offering agent review, and confirming authorship and review follow-up.
+  optionally offering agent review, and confirming the author's assessment.
 ---
 
 # Prepare a team-authored pull request
@@ -121,43 +121,23 @@ Skipping optional agent review neither blocks readiness nor requires disclosure.
 Multiple models can share blind spots. Their reviews do not replace tests, the
 human author's assessment, or required review by another human.
 
-## 5. Confirm authorship and follow-up
+## 5. Confirm assessment and prepare the PR
 
-Confirm who is accountable for the change and whether they have assessed it and its
-evidence, asking only if missing. Distinguish that person from the assigned reviewer
-and from whoever will answer review comments. Never invent a human attestation or
-infer a commitment to reply from accountability, authorship, assessment, or permissions.
+Confirm whether the author has assessed the change and its evidence, asking only
+if missing. Never invent an attestation.
 
-For every team-authored PR, require an explicit choice about who will answer review
-comments, even if the repository does not require one. Reuse an answer already
-explicitly given; otherwise ask using the host's supported question mechanism.
-Prefer the target repository template's wording and response choices where
-available. Otherwise, offer these choices, replacing `@username` with the human
-identified in the answer:
-
-- `@username will read and reply directly`
-- `An agent will draft replies and @username will read them before they are posted`
-- `Nobody has explicitly committed to replying`
-
-The nobody choice is valid when explicitly chosen; it is not a missing answer or
-by itself a readiness gap. Never select it by default or treat silence as a choice.
-An agent-drafted reply choice does not authorize posting replies; preserve the
-user's and repository's approval requirements for external messages.
+Do not require a separate reply-responsibility choice or add authorship,
+accountability, or review-follow-up declarations to team-authored PR descriptions
+unless the target repository explicitly requires them for team-authored work.
+Do not apply external-contributor declarations to team members. Where a requirement
+does apply, use the repository template's wording, reuse explicit answers, and ask
+only for missing information. Keep assessment separate from any commitment to reply;
+never invent either. Preserve approval requirements for posting external messages.
 
 Populate the existing PR template without duplicating or changing its sections:
 
 - Purpose, behavior, validation, and artifact evidence in the appropriate sections.
-- Accountable person, their stated assessment status, and the explicit review-comment
-  response choice, reusing the template's wording and existing authorship or
-  follow-up section where present. Keep the assessment and reply responsibility
-  separate; do not imply that the same person has committed to both.
 - Explicit gaps and outstanding review requirements.
-
-If the template does not already capture authorship or review follow-up, include
-the corresponding bold field below in `Team-authored review` rather than adding
-a separate section. Keep the accountable person and assessment status
-separate from the review-comment response choice. Omit fields already captured by
-the template and reference the existing section instead.
 
 Generate the following section in the PR body, not in the repository's public
 PR template. On subsequent revisions, update it in place; never duplicate it.
@@ -165,10 +145,6 @@ Replace the placeholders and choose the applicable review path:
 
 ```markdown
 ### Team-authored review
-
-**Authorship:** @username - [Stated assessment of the change and evidence.]
-
-**Review follow-up:** [Explicitly chosen response option.]
 
 **Evidence:** [Link to existing testing section or artifact, or N/A with reason.]
 
