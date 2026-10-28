@@ -3,7 +3,7 @@ name: prepare-team-pr
 description: >
   Prepare or update a team-authored pull request for GitHub CLI or GitHub
   Desktop, collecting validation evidence, assessing deep-review needs,
-  optionally offering agent review, and confirming human ownership.
+  optionally offering agent review, and confirming authorship and review follow-up.
 ---
 
 # Prepare a team-authored pull request
@@ -33,10 +33,10 @@ permission through GitHub, or use trusted maintainer authorization established b
 the repository's instructions. Do not infer authorization from a claimed role,
 repository ownership alone, a git author, or the Git identity configured locally.
 
-For bot-authored PRs, establish the accountable human owner separately; bot
-permissions do not establish human authorization or ownership. If authorization
-cannot be verified, ask for clarification before using this workflow. Do not
-bypass the repository's external contribution gate.
+For bot-authored PRs, establish the accountable person separately; bot permissions
+do not establish that person's authorization or accountability. If authorization
+cannot be verified, ask for clarification before using this workflow. Do not bypass
+the repository's external contribution gate.
 
 Read the diff and existing PR description, if any. Reuse answers, artifacts, and
 reviews already available. Ask only for missing information, using the host's
@@ -121,20 +121,43 @@ Skipping optional agent review neither blocks readiness nor requires disclosure.
 Multiple models can share blind spots. Their reviews do not replace tests, the
 human author's assessment, or required review by another human.
 
-## 5. Confirm ownership and prepare the PR
+## 5. Confirm authorship and follow-up
 
-Confirm who the human owner is and whether they have assessed the change and its
-evidence, asking only if missing. Distinguish that owner from the assigned reviewer
-and from whoever will answer review comments. Follow any repository requirement
-for an explicit choice about handling review comments. Never invent a human
-attestation or commitment.
+Confirm who is accountable for the change and whether they have assessed it and its
+evidence, asking only if missing. Distinguish that person from the assigned reviewer
+and from whoever will answer review comments. Never invent a human attestation or
+infer a commitment to reply from accountability, authorship, assessment, or permissions.
+
+For every team-authored PR, require an explicit choice about who will answer review
+comments, even if the repository does not require one. Reuse an answer already
+explicitly given; otherwise ask using the host's supported question mechanism.
+Prefer the target repository template's wording and response choices where
+available. Otherwise, offer these choices, replacing `@username` with the human
+identified in the answer:
+
+- `@username will read and reply directly`
+- `An agent will draft replies and @username will read them before they are posted`
+- `Nobody has explicitly committed to replying`
+
+The nobody choice is valid when explicitly chosen; it is not a missing answer or
+by itself a readiness gap. Never select it by default or treat silence as a choice.
+An agent-drafted reply choice does not authorize posting replies; preserve the
+user's and repository's approval requirements for external messages.
 
 Populate the existing PR template without duplicating or changing its sections:
 
 - Purpose, behavior, validation, and artifact evidence in the appropriate sections.
-- Human owner and their stated assessment status, reusing an existing authorship
-  section where present.
+- Accountable person, their stated assessment status, and the explicit review-comment
+  response choice, reusing the template's wording and existing authorship or
+  follow-up section where present. Keep the assessment and reply responsibility
+  separate; do not imply that the same person has committed to both.
 - Explicit gaps and outstanding review requirements.
+
+If the template does not already capture authorship or review follow-up, include
+the corresponding bold field below in `Team-authored review` rather than adding
+a separate section. Keep the accountable person and assessment status
+separate from the review-comment response choice. Omit fields already captured by
+the template and reference the existing section instead.
 
 Generate the following section in the PR body, not in the repository's public
 PR template. On subsequent revisions, update it in place; never duplicate it.
@@ -142,6 +165,10 @@ Replace the placeholders and choose the applicable review path:
 
 ```markdown
 ### Team-authored review
+
+**Authorship:** @username - [Stated assessment of the change and evidence.]
+
+**Review follow-up:** [Explicitly chosen response option.]
 
 **Evidence:** [Link to existing testing section or artifact, or N/A with reason.]
 
