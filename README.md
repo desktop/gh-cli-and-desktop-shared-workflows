@@ -8,7 +8,7 @@ Shared Agent Skills live in [`skills/`](skills/).
 
 | Skill | Description |
 |-------|-------------|
-| [`prepare-team-pr`](skills/prepare-team-pr/SKILL.md) | Draft for review: prepare team-authored PRs with evidence, risk-based review, and human ownership; generate a review section in the PR body without changing public templates. Product-specific requirements remain in local `AGENTS.md`. |
+| [`prepare-team-pr`](skills/prepare-team-pr/SKILL.md) | Draft for review: prepare team-authored PRs with evidence, risk-based review, and the author's assessment; generate a review section in the PR body without changing public templates. Product-specific requirements remain in local `AGENTS.md`. |
 
 ## Available Workflows
 
